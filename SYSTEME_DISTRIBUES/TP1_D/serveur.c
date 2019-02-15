@@ -2,13 +2,12 @@
 
 int main(int argc, char** argv)
 {
-  static struct sockaddr_in addr_local; // adresse de la socket locale
   static struct sockaddr_in addr_client;  // adresse de la socket coté serveur
   struct hostent *host_client;  // identifiant du client
   socklen_t lg; // taille de l'addresse socket
-  long port=4000;
+  long port;
   int sock; // descripteur de la socket locale
-  char *reponse = "bien recu";  // chaine  à envoyer en réponse
+  char *reponse = "bien reçu";  // chaine  à envoyer en réponse
   char buffer[TAILLEBUF]; // buffer de réception
   char *chaine; // chaine reçue
   int nb_octets;  // nombre d'octets lus ou envoyés
@@ -16,12 +15,17 @@ int main(int argc, char** argv)
   if(argc==2)
   {
     port=strtol(argv[1], NULL, 10);
-
+  }
+  else
+  {
+    exit(-1);
   }
 
   sock=creerSocketUDP(port);
 
   // attente de données venant d'un client
+
+
   lg = sizeof(struct sockaddr_in);
   nb_octets = recvfrom(sock, buffer, TAILLEBUF, 0, (struct sockaddr *)&addr_client, &lg);
   if (nb_octets == -1)

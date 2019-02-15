@@ -7,31 +7,26 @@ int main(int argc, char** argv)
   socklen_t lg;   // taille de l'addresse socket
   int sock;   // descripteur de la socket locale
   char* hostName="scinfe056";
-  long port=4000;
+  long port;
   char *msg = "bonjour";    // chaine  à envoyer
   char buffer[TAILLEBUF];   // buffer de réception
   char *reponse;  // chaine reçue en réponse
   int nb_octets;  // nombre d'octets lus ou envoyés
 
-  if(argc==2)
-  {
-    hostName=argv[1];
-  }
-  else if(argc==3)
+  if(argc==3)
   {
     hostName=argv[1];
     port=strtol(argv[2], NULL, 10);
+  }
+  else
+  {
+    exit(-1);
   }
 
 
 
   // création d'une socket UDP
-  sock = socket(AF_INET, SOCK_DGRAM, 0);
-  if (sock == -1)
-  {
-    perror("erreur création socket");
-    exit(1);
-  }
+  sock = creerSocketUDP(0);
 
   // récupération identifiant du serveur
   serveur_host = gethostbyname(hostName);

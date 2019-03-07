@@ -6,13 +6,14 @@ public class Serveur
 {
 
 	public static void main(String[] args) 
-	{
+	{	
 		DatagramPacket packet;
-		// création d'une socket liée au port 7777
 		DatagramSocket socket;
+
 		try 
 		{
-			socket = new DatagramSocket(7777);
+			socket = new DatagramSocket(getOpt(args));
+			
 			// tableau de 15 octets qui contiendra les données reçues
 			byte[] data = new byte[15];
 			// création d'un paquet en utilisant le tableau d'octets
@@ -34,11 +35,26 @@ public class Serveur
 			// on envoie le paquet au client
 			socket.send(packet);
 		} 
-		catch (IOException e) 
+		catch (Exception e) 
 		{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+
+	}
+	
+	private static int getOpt(String[] args) throws Exception
+	{
+		if(args.length>1)
+		{
+			throw new WAException();
+		}
+		if(args.length==0)
+		{
+			//Port par défaut
+			return 7777;
+		}
+		return Integer.parseInt(args[0]);
 
 	}
 

@@ -8,8 +8,6 @@ int main(int argc, char** argv)
   struct hostent *host_serveur;
   // socket locale coté client
   int sock;
-  // message à envoyer au serveur
-  char *message = "bonjour";
   // chaîne où sera écrit le message reçu
   char reponse[TAILLEBUF];
   // nombre d'octets envoyés/reçus
@@ -30,12 +28,7 @@ int main(int argc, char** argv)
   }
 
   // création socket TCP
-  sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock == -1)
-  {
-    perror("creation socket");
-    exit(1);
-  }
+  sock=creerSocketTCP(0);
 
   // récupération identifiants de la machine serveur
   host_serveur = gethostbyname(hostName);
@@ -58,8 +51,56 @@ int main(int argc, char** argv)
     exit(1);
   }
 
+  FILE* fichier = NULL;
+  long lSize=0;
+  char* chaine;
+  size_t result;
+
+  fichier = fopen("doge.jpg", "rb");
+
+  if (fichier==NULL)
+  {
+    fputs ("File error",stderr);
+    exit (1);
+  }
+
+   // obtain file size:
+   fseek (fichier, 0, SEEK_END);
+   lSize = ftell (fichier);
+   rewind (fichier);
+
+   // allocate memory to contain the whole file:
+   chaine = (char*) malloc (sizeof(char)*lSize);
+   if (chaine == NULL)
+   {
+     fputs ("Memory error",stderr);
+     exit (2);
+   }
+
+   // copy the file into the buffer:
+   /*result = fread (chaine,1,lSize,fichier);
+   if (result != lSize)
+   {
+     fputs ("Reading error",stderr);
+     exit (3);
+   }*/
+
+   int num_read=0;
+   char s;
+   while ((num_read = fread(&s, 1, 1, fichier))!=0)
+   {
+    strncat(chaine,&s,1);
+  }
+
+   /* the whole file is now loaded in the memory buffer. */
+
+   // terminate
+   fclose (fichier);
+
+   printf("%d", strlen(chaine));
   // connexion etablie, on envoie le message
-  nb_octets = write(sock, message, strlen(message)+1);
+  nb_octets = write(sock, chaine, strlen(chaine)+1);
+  free (chaine);
   // on attend la réponse du serveur
   nb_octets = read(sock, reponse, TAILLEBUF);
   printf(" reponse recue : %s\n", reponse);

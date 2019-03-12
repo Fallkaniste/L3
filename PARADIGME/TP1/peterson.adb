@@ -24,7 +24,7 @@ begin
     -- protocole d entree
     demande1:=TRUE;
     tour:=2;
-    while (demande2=TRUE OR tour/=1) loop
+    while (demande2=TRUE AND tour/=1) loop
       Put_Line("Process1 en attente");
     end loop;
 
@@ -50,7 +50,7 @@ for I in 1..2 loop
   -- protocole d entree
   demande2:=TRUE;
   tour:=1;
-  while (demande1=TRUE OR tour/=2) loop
+  while (demande1=TRUE AND tour/=2) loop
     Put_Line("Process2 en attente");
   end loop;
 

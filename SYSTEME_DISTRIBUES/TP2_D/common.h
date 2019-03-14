@@ -11,7 +11,7 @@
 #include <netinet/in.h>
 #include <errno.h>
 
-#define TAILLEBUF 5000000
+#define TAILLEBUF 64
 
 int creerSocketTCP(int port);
 

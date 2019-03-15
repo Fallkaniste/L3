@@ -8,8 +8,6 @@ int main(int argc, char** argv)
   int lg_addr;
   // socket d'écoute et de service
   int socket_ecoute, socket_service;
-  // buffer qui contiendra le message reçu
-  char message[TAILLEBUF];
   // chaîne reçue du client
   char *chaine_recue;
   // chaîne renvoyée au client
@@ -56,7 +54,7 @@ int main(int argc, char** argv)
   chaine_recue =(char *)malloc(lSize * sizeof(char));
   nb_octets = read(socket_service, chaine_recue, lSize);
   printf("taille effective:%d", nb_octets);
-  /*memcpy(chaine_recue, message, nb_octets);*/
+  
   FILE* fichier = NULL;
 
   fichier = fopen("reponse.jpg", "wb");

@@ -8,8 +8,6 @@ int main(int argc, char** argv)
   int lg_addr;
   // socket d'écoute et de service
   int socket_ecoute, socket_service;
-  // buffer qui contiendra le message reçu
-  char message[TAILLEBUF];
   // chaîne reçue du client
   char *chaine_recue;
   // chaîne renvoyée au client
@@ -17,8 +15,9 @@ int main(int argc, char** argv)
   // nombre d'octets reçus ou envoyés
   int nb_octets;
 
-  int port=7777;
+  long lSize;
 
+  int port=7777;
 
   if(argc==2)
   {
@@ -50,19 +49,22 @@ int main(int argc, char** argv)
   }
 
   // la connexion est établie, on attend les données envoyées par le client
-  nb_octets = read(socket_service, message, TAILLEBUF);
-  chaine_recue =(char *)malloc(nb_octets * sizeof(char));
-  memcpy(chaine_recue, message, nb_octets);
-
+  nb_octets = read(socket_service, &lSize, sizeof(long));
+  printf("taille reçue :%ld\n",lSize);
+  chaine_recue =(char *)malloc(lSize * sizeof(char));
+  nb_octets = read(socket_service, chaine_recue, lSize);
+  printf("taille effective:%d", nb_octets);
+  
   FILE* fichier = NULL;
 
   fichier = fopen("reponse.jpg", "wb");
-
-  if (fichier != NULL)
+  int i=0;
+  for(i=0; i<lSize; i++)
   {
-    fputs(chaine_recue, fichier);
-    fclose(fichier);
+    fwrite(&chaine_recue[i], 1, sizeof(char), fichier);
   }
+
+  fclose(fichier);
 
   // on envoie la réponse au client
   write(socket_service, reponse, strlen(reponse)+1);

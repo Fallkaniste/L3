@@ -54,7 +54,6 @@ int main(int argc, char** argv)
   FILE* fichier = NULL;
   long lSize=0;
   char* chaine;
-  size_t result;
 
   fichier = fopen("doge.jpg", "rb");
 
@@ -68,7 +67,6 @@ int main(int argc, char** argv)
    fseek (fichier, 0, SEEK_END);
    lSize = ftell (fichier);
    rewind (fichier);
-
    // allocate memory to contain the whole file:
    chaine = (char*) malloc (sizeof(char)*lSize);
    if (chaine == NULL)
@@ -76,32 +74,19 @@ int main(int argc, char** argv)
      fputs ("Memory error",stderr);
      exit (2);
    }
+   //read file
+   fread(chaine, sizeof(char), lSize, fichier);
 
-   // copy the file into the buffer:
-   /*result = fread (chaine,1,lSize,fichier);
-   if (result != lSize)
-   {
-     fputs ("Reading error",stderr);
-     exit (3);
-   }*/
 
-   int num_read=0;
-   char s;
-   while ((num_read = fread(&s, 1, 1, fichier))!=0)
-   {
-    strncat(chaine,&s,1);
-  }
 
-   /* the whole file is now loaded in the memory buffer. */
+  // connexion etablie, on envoie la taille de l'image
+  nb_octets = write(sock, &lSize, sizeof(long));
+  printf("taille envoyée :%ld\n",lSize);
 
-   // terminate
-   fclose (fichier);
-
-   printf("%d", strlen(chaine));
-  // connexion etablie, on envoie le message
-  nb_octets = write(sock, chaine, strlen(chaine)+1);
+  //on envoie l'image
+  nb_octets = write(sock, chaine, lSize);
   free (chaine);
-  // on attend la réponse du serveur
+  //on attend la réponse du serveur
   nb_octets = read(sock, reponse, TAILLEBUF);
   printf(" reponse recue : %s\n", reponse);
   // on ferme la socket

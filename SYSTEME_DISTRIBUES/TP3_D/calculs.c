@@ -11,7 +11,7 @@ long factoriel(int nb)
 }
 
 
-void analyser_donnees(int donnees[], int taille, struct res_analyse_donnees *res)
+void analyser_donnees(int donnees[], int taille, res_analyse_donnees *res)
 {
   int i;
   long somme;
@@ -19,7 +19,7 @@ void analyser_donnees(int donnees[], int taille, struct res_analyse_donnees *res
   res -> min = donnees[0];
   res -> max = donnees[0];
   somme = donnees[0];
-  
+
   for (i=1; i < taille; i++)
     {
       if (donnees[i] > res -> max) res -> max = donnees[i];
@@ -30,12 +30,10 @@ void analyser_donnees(int donnees[], int taille, struct res_analyse_donnees *res
 }
 
 long puissance(int nb, int puiss)
-{ 
+{
   long res = nb;
   int i;
   for (i=1; i < puiss; i++)
     res = res * nb;
   return res;
 }
-
-

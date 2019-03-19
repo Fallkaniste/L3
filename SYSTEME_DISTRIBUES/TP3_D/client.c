@@ -6,7 +6,7 @@ static int sock;
 
 int main()
 {
-  sock=ouvrirConnexion("localhost", 7778);
+  sock=ouvrirConnexion("localhost", 7777);
   printf("%ld",factoriel(2));
   return 0;
 }
@@ -17,7 +17,7 @@ int ouvrirConnexion(char* host, int port)
   struct hostent* host_serveur;
 
   //création de la socket locale
-  int sock=creerSocketTCP(port);
+  int sock=creerSocketTCP(0);
 
   // récupération identifiants de la machine serveur
   host_serveur = gethostbyname(host);

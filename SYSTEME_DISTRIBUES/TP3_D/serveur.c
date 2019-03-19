@@ -40,7 +40,6 @@ int ouvrirConnexion(int socket_ecoute)
     perror("erreur accept");
     exit(1);
   }
-
   return sock;
 }
 

@@ -1,6 +1,6 @@
 with TEXT_IO; use TEXT_IO;
 
-procedure Cheminot3 is
+procedure Cheminot4 is
 package int_io is new Integer_io(integer);
 use int_io;
 
@@ -17,18 +17,22 @@ begin
 
   --pour tester je prend 2 iterations par exemple et non pas une boucle infinie
 
-  loop
+  for I in 1..10 loop
     -- protocole d entree
-    Put_Line("Peruvien arrete train et met sa pierre");
-    pierre1:=TRUE;
-    while(pierre2=TRUE) loop
-      pierre1:=FALSE;
-      Put_Line("Peruvien enleve sa pierre et fait la sieste");
+    Put_Line("Péruvien arrete train ");
+    loop
+      Put_Line("Péruvien met sa pierre");
       pierre1:=TRUE;
+      if(pierre2=TRUE) then
+        pierre1:=FALSE;
+        Put_Line("Péruvien enleve sa pierre et fait la sieste");
+      else
+        exit;
+      end if;
     end loop;
 
   -- process1 entre en SC
-  Put_Line("Peruvien passe");
+  Put_Line("Péruvien passe");
 
   -- protocole de sortie
   Put_Line("Peruvien retourne au panier");
@@ -49,14 +53,18 @@ begin
 
   --pour tester je prend 2 iterations par exemple et non pas une boucle infinie
 
-  loop
+  for I in 1..10 loop
     -- protocole d entree
-    Put_Line("Bolivien arrete train et met sa pierre");
-    pierre2:=TRUE;
-    while(pierre1=TRUE) loop
-      pierre2:=FALSE;
-      Put_Line("Bolivien enleve sa pierre et fait la sieste");
+    Put_Line("Bolivien arrete train ");
+    loop
+      Put_Line("Bolivien met sa pierre");
       pierre2:=TRUE;
+      if(pierre1=TRUE) then
+        pierre2:=FALSE;
+        Put_Line("Bolivien enleve sa pierre et fait la sieste");
+      else
+        exit;
+      end if;
     end loop;
 
   -- process1 entre en SC
@@ -74,4 +82,4 @@ end bolivie;
 
 begin
   Null;
-end Cheminot3;
+end Cheminot4;

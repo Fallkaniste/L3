@@ -3,4 +3,4 @@
 *.tar.xz
 *.png
 *.ali
-*.~lock
+*.odt#

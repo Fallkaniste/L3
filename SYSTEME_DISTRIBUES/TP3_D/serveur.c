@@ -49,6 +49,7 @@ void traiter_communication(int socket_service)
   int nb_octets;
   int fini=0;
   int nb;
+  int puiss;
   long res;
 
   while(!fini)
@@ -68,7 +69,7 @@ void traiter_communication(int socket_service)
         fini=1;
         break;
       case FACTORIEL :
-        printf("On m'a demandé une factorielle\n");
+        printf("On m'a demandé une factorielle ");
         //Réception valeur
         nb_octets=read(socket_service, &nb, sizeof(int));
         if(nb_octets==0 || nb_octets==-1)
@@ -76,9 +77,37 @@ void traiter_communication(int socket_service)
           fini=1;
           break;
         }
-        printf("De %ld\n", res);
+        printf("de %d\n", nb);
         //Calcul
         res=factoriel(nb);
+
+        //Réponse
+        nb_octets=write(socket_service, &res, sizeof(long));
+        if(nb_octets==0 || nb_octets==-1)
+        {
+          fini=1;
+          break;
+        }
+        break;
+      case PUISSANCE :
+        printf("On m'a demandé une puissance :\n");
+        //Réception valeur
+        nb_octets=read(socket_service, &nb, sizeof(int));
+        if(nb_octets==0 || nb_octets==-1)
+        {
+          fini=1;
+          break;
+        }
+
+        nb_octets=read(socket_service, &puiss, sizeof(int));
+        if(nb_octets==0 || nb_octets==-1)
+        {
+          fini=1;
+          break;
+        }
+        printf("%d à la puissance %d\n", nb, puiss);
+        //Calcul
+        res=puissance(nb,puiss);
 
         //Réponse
         nb_octets=write(socket_service, &res, sizeof(long));

@@ -37,3 +37,8 @@ long puissance(int nb, int puiss)
     res = res * nb;
   return res;
 }
+
+long moyenne(int nombres[], int taille)
+{
+  
+}

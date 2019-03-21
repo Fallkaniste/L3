@@ -7,7 +7,7 @@ static int sock;
 int main()
 {
   sock=ouvrirConnexion("localhost", 7777);
-  printf("%ld",factoriel(2));
+  printf("%ld\n",puissance(5,3));
   return 0;
 }
 
@@ -65,6 +65,43 @@ long factoriel(int nb)
   message=(char*) malloc(taille);
   memcpy(message,&req,sizeof(req));
   memcpy(message+sizeof(req), &nb, sizeof(int));
+
+  //Envoi message
+  nb_octets=write(sock, message, taille);
+  free(message);
+  if(nb_octets==0 || nb_octets==-1)
+  {
+    return -1;
+  }
+
+  //Réception résultat
+  nb_octets=read(sock,&resultat,sizeof(long));
+  if(nb_octets==0 || nb_octets==-1)
+  {
+    return -1;
+  }
+
+  return resultat;
+}
+
+long puissance(int nb, int puiss)
+{
+  requete req;
+  char* message;
+  int taille;
+  int nb_octets;
+  long resultat;
+
+  //Init structure
+  req.type=PUISSANCE;
+  req.taille=2*sizeof(int);
+
+  //Init message
+  taille=sizeof(requete)+2* sizeof(int);
+  message=(char*) malloc(taille);
+  memcpy(message,&req,sizeof(req));
+  memcpy(message+sizeof(req), &nb, sizeof(int));
+  memcpy(message+sizeof(req)+sizeof(int), &puiss, sizeof(int));
 
   //Envoi message
   nb_octets=write(sock, message, taille);

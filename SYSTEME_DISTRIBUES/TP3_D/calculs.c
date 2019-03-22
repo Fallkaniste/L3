@@ -11,7 +11,7 @@ long factoriel(int nb)
 }
 
 
-void analyser_donnees(int donnees[], int taille, res_analyse_donnees *res)
+void analyserDonnees(int donnees[], int taille, res_analyse_donnees *res)
 {
   int i;
   long somme;
@@ -22,11 +22,17 @@ void analyser_donnees(int donnees[], int taille, res_analyse_donnees *res)
 
   for (i=1; i < taille; i++)
     {
-      if (donnees[i] > res -> max) res -> max = donnees[i];
-      if (donnees[i] < res -> min) res -> min = donnees[i];
+      if (donnees[i] > res -> max)
+      {
+        res -> max = donnees[i];
+      }
+      if (donnees[i] < res -> min)
+      {
+        res -> min = donnees[i];
+      }
       somme += donnees[i];
     }
-  res -> moy = ((float)somme) / taille;
+  res -> moy = (float) (somme / taille);
 }
 
 long puissance(int nb, int puiss)
@@ -36,9 +42,4 @@ long puissance(int nb, int puiss)
   for (i=1; i < puiss; i++)
     res = res * nb;
   return res;
-}
-
-long moyenne(int nombres[], int taille)
-{
-  
 }

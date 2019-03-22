@@ -51,6 +51,9 @@ void traiter_communication(int socket_service)
   int nb;
   int puiss;
   long res;
+  int attendus, offset;
+  int* tab;
+  res_analyse_donnees resu;
 
   while(!fini)
   {
@@ -58,6 +61,8 @@ void traiter_communication(int socket_service)
     nb_octets=read(socket_service, &req, sizeof(requete));
     if(nb_octets==0 || nb_octets==-1)
     {
+      printf("%d", nb_octets);
+      perror("landry genius");
       fini=1;
       break;
     }
@@ -66,6 +71,7 @@ void traiter_communication(int socket_service)
     switch(req.type)
     {
       case FIN :
+        printf("J'arrête la connexion\n");
         fini=1;
         break;
       case FACTORIEL :
@@ -116,6 +122,30 @@ void traiter_communication(int socket_service)
           fini=1;
           break;
         }
+        break;
+      case STATS :
+        printf("On m'a demandé des statistiques\n");
+        tab=malloc(req.taille);
+        attendus=req.taille;
+        offset=0;
+        printf("Avec ces donnees :\n");
+        while(attendus>0)
+        {
+          nb_octets=read(socket_service, tab+offset, sizeof(int));
+          printf("%d ", *(tab+offset));
+          offset++;
+          attendus-=nb_octets;
+        }
+        printf("\n");
+
+        analyserDonnees(tab,offset,&resu);
+        nb_octets=write(socket_service, &resu, sizeof(res_analyse_donnees));
+        if(nb_octets==0 || nb_octets==-1)
+        {
+          fini=1;
+          break;
+        }
+        free(tab);
         break;
       default :
         printf("Vous ne devriez pas être ici.\n");

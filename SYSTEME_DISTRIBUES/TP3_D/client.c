@@ -7,7 +7,70 @@ static int sock;
 int main()
 {
   sock=ouvrirConnexion("localhost", 7777);
-  printf("%ld\n",puissance(5,3));
+
+  int* tab;
+  int taille;
+  int nb;
+  int exp;
+  res_analyse_donnees res;
+  int choix=-1;
+
+  while(choix!=3)
+  {
+    choix=-1;
+
+    do
+    {
+      printf("Choisissez votre requête :\n\t0:Factorielle\n\t1:Puissance\n\t2:Statistiques\n\t3:Fin\n");
+      scanf("%d", &choix);
+    } while(choix<0 || choix>3);
+
+    switch(choix)
+    {
+      case 0:
+        do
+        {
+          printf("Entrez un nombre (nombre positif):\n");
+          scanf("%d", &nb);
+        } while(taille<nb);
+        printf("Factorielle de %d : %ld\n\n", nb, factoriel(nb));
+        break;
+      case 1:
+        printf("Entrez un nombre:\n");
+        scanf("%d", &nb);
+        printf("Entrez l'exposant:\n");
+        scanf("%d", &exp);
+        printf("%d puissance %d: %ld\n\n", nb, exp, puissance(nb, exp));
+        break;
+      case 2:
+        do
+        {
+          printf("Entrez le nombre de notes à saisir (nombre positif):\n");
+          scanf("%d", &taille);
+        } while(taille<0);
+        tab=malloc(taille*sizeof(int));
+        for(int i=0; i<taille; i++)
+        {
+          do
+          {
+            printf("Entrez la note n° %d (nombre positif):\n",i);
+            scanf("%d", &tab[i]);
+          } while(tab[i]<0);
+        }
+        if(analyserDonnees(tab, taille,&res)==-1)
+        {
+          perror("erreur FATALE\n");
+          exit(1);
+        }
+        free(tab);
+        printf("Moyenne :%f\nMin:%d\nMax:%d\n\n", res.moy, res.min, res.max);
+        break;
+      case 3:
+        fermerConnexion();
+        break;
+    }
+  }
+
   return 0;
 }
 
@@ -45,6 +108,26 @@ int ouvrirConnexion(char* host, int port)
 
 void fermerConnexion()
 {
+  char* message;
+  int nb_octets=0;
+  requete req;
+  req.type=FIN;
+  req.taille=0;
+
+  message=(char*) malloc(sizeof(requete));
+  memcpy(message,&req,sizeof(requete));
+
+  nb_octets=write(sock, message, sizeof(requete));
+  free(message);
+  if(nb_octets==0 || nb_octets==-1)
+  {
+    perror("mince alors");
+    exit(1);
+  }
+
+
+
+
   close(sock);
 }
 
@@ -119,4 +202,38 @@ long puissance(int nb, int puiss)
   }
 
   return resultat;
+}
+
+int analyserDonnees(int donnees[], int taille,res_analyse_donnees *res)
+{
+  int taille_data;
+  int nb_octets;
+  char* message;
+  requete req;
+
+  req.type=STATS;
+  req.taille=taille*sizeof(int);
+  taille_data=sizeof(requete)+req.taille;
+
+  message=malloc(taille_data);
+  memcpy(message, &req, sizeof(requete));
+  memcpy(message+sizeof(requete), donnees, req.taille);
+
+  nb_octets=write(sock,message,taille_data);
+  if(nb_octets==0 || nb_octets==-1)
+  {
+    return -1;
+  }
+  free(message);
+
+  nb_octets=read(sock, res, sizeof(res_analyse_donnees));
+  if(nb_octets==0 || nb_octets==-1)
+  {
+    return -1;
+  }
+
+  return 0;
+
+
+
 }

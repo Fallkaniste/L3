@@ -32,7 +32,7 @@ int main()
         {
           printf("Entrez un nombre (nombre positif):\n");
           scanf("%d", &nb);
-        } while(taille<nb);
+        } while(nb<0);
         printf("Factorielle de %d : %ld\n\n", nb, factoriel(nb));
         break;
       case 1:

@@ -32,7 +32,7 @@ void analyserDonnees(int donnees[], int taille, res_analyse_donnees *res)
       }
       somme += donnees[i];
     }
-  res -> moy = (float) (somme / taille);
+  res -> moy = (float) (somme) / taille;
 }
 
 long puissance(int nb, int puiss)

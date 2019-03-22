@@ -1,17 +1,29 @@
 #include "common.h"
 #include "calculs.h"
 #include "serveur.h"
+#include <signal.h>
 
 int main()
 {
   int socket_ecoute;
   int socket_service;
+  int pid;
 
   //création de la socket d'écoute
   socket_ecoute=creerSocketTCP(7777);
-  socket_service=ouvrirConnexion(socket_ecoute);
-  traiter_communication(socket_service);
-  close(socket_service);
+  signal(SIGCHLD, SIG_IGN);
+  while(1)
+  {
+    socket_service=ouvrirConnexion(socket_ecoute);
+    pid=fork();
+    if(!pid)
+    {
+      traiter_communication(socket_service);
+      return 0;
+    }
+  }
+
+
 
   return 0;
 }
@@ -152,4 +164,5 @@ void traiter_communication(int socket_service)
         break;
     }
   }
+  close(socket_service);
 }

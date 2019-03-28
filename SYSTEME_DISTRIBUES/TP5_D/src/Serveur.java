@@ -37,6 +37,7 @@ public class Serveur
 		while(true)
 		{
 			Socket sock=serverSocket.accept();
+			System.out.println("J'ai trouvé un client!");
 			(new ThreadClient(sock, dm)).start();
 		}
 	}
@@ -63,15 +64,23 @@ public class Serveur
 		{
 			try
 			{
+				System.out.println("J'ai créé un fils pour m'en occuper.");
 				ObjectOutputStream output=new ObjectOutputStream(sock.getOutputStream());
 				ObjectInputStream input=new ObjectInputStream(sock.getInputStream());
 				
 				while(true)
 				{
+					System.out.println("J'attends un message");
 					Message m = (Message)input.readObject();
+					System.out.println("J'ai reçu un message!");
 					if(m instanceof AddPersonneRequest)
 					{
+						
 						output.writeObject(new IdMessage(dm.addPersonne(((AddPersonneRequest) m).getPersonne())));
+					}
+					else if(m instanceof GetIdRequest)
+					{			
+						output.writeObject(new IdMessage(dm.getID(((AddPersonneRequest) m).getPersonne())));
 					}
 					else if(m instanceof GetPersonneRequest)
 					{

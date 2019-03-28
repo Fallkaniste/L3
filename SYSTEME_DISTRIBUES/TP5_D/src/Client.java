@@ -14,12 +14,13 @@ public class Client
 		try 
 		{
 			ouvrirConnexion("localhost", 7777);
-			int id=addPersonne(new Personne("Roger"));
+			int id=addPersonne(new Personne("Roger",54));
 			System.out.println("Roger a bien été ajouté avec l'id :"+id);
-			int id2=addPersonne(new Personne("Jean-Pierre"));
+			int id2=addPersonne(new Personne("Jean-Pierre",62));
 			System.out.println("Jean-Pierre a bien été ajouté avec l'id :"+id2);
 			System.out.println("La personne avec l'id "+id+" est "+getPersonne(id));
-			System.out.println("La personne avec l'id "+id2+" est "+getPersonne(id));
+			System.out.println("La personne avec l'id "+id2+" est "+getPersonne(id2));
+			System.out.println("Roger est à l'id "+getID(new Personne("Roger",54)));
 			
 		} 
 		catch (Exception e) 
@@ -42,6 +43,20 @@ public class Client
 		
 		Object o = input.readObject();
 		
+		if(o instanceof IdMessage)
+		{
+			return ((IdMessage)o).getID();
+		}
+		
+		throw new Exception("Message non attendu"+o);
+	}
+	
+	public static int getID(Personne p) throws Exception
+	{
+		output.writeObject(new GetIdRequest(p));
+		
+		Object o = input.readObject();
+		System.out.println("Je suis arrivé là");
 		if(o instanceof IdMessage)
 		{
 			return ((IdMessage)o).getID();

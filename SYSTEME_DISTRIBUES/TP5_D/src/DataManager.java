@@ -11,7 +11,11 @@ public class DataManager
 	
 	public int addPersonne(Personne p)
 	{
-		list.add(p);
+		if(!list.contains(p))
+		{
+			list.add(p);
+		}	
+
 		return getID(p);
 		
 	}

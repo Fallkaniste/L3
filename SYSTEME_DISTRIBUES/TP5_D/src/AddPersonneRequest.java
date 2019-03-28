@@ -1,8 +1,8 @@
 
 public class AddPersonneRequest extends PersonneMessage 
 {
-	private static final long serialVersionUID = 1L;
-	
+	private static final long serialVersionUID = -2964704267880063118L;
+
 	public AddPersonneRequest()
 	{
 		super();

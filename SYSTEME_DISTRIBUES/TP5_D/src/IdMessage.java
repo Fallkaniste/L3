@@ -1,7 +1,7 @@
 
 public class IdMessage extends Message 
 {
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 3597923772169392267L;
 	private int id;
 	
 	public IdMessage()

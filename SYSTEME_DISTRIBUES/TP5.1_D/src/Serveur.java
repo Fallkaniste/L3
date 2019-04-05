@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -64,25 +65,44 @@ public class Serveur
 		{
 			try
 			{
-				System.out.println("J'ai créé un fils pour m'en occuper.");
 				ObjectOutputStream output=new ObjectOutputStream(sock.getOutputStream());
 				ObjectInputStream input=new ObjectInputStream(sock.getInputStream());
 				
 				while(true)
 				{
-					System.out.println("J'attends un message");
-					Message m = (Message)input.readObject();
-					System.out.println("J'ai reçu un message!");
-					if(m instanceof AddPersonneRequest)
+					RequestMessage m = (RequestMessage)input.readObject();
+					
+					
+					Method met = null;
+					Object result = null;
+					
+					try 
+					{    
+					    met = dm.getClass().getMethod(m.getMethod(), m.getParametersTypes());
+					}
+					catch (NoSuchMethodException e) 
+					{
+					    e.printStackTrace();
+					}
+
+					try 
+					{
+					    result =  met.invoke(dm, m.getParameters());
+					}
+					catch(IllegalAccessException e) 
+					{
+					    e.printStackTrace();
+					}
+					catch(InvalidIdException e)
 					{
 						
-						output.writeObject(new IdMessage(dm.addPersonne(((AddPersonneRequest) m).getPersonne())));
 					}
-					else if(m instanceof GetIdRequest)
-					{	
-						output.writeObject(new IdMessage(dm.getID(((GetIdRequest) m).getPersonne())));
-					}
-					else if(m instanceof GetPersonneRequest)
+					
+										
+					output.writeObject(new Message(result));
+					
+
+					/*else if(m instanceof GetPersonneRequest)
 					{
 						try
 						{
@@ -93,7 +113,7 @@ public class Serveur
 						{
 							output.writeObject(new InvalidIdExceptionMessage(e));
 						}
-					}		
+					}*/		
 				}
 			}
 			catch(Exception e)

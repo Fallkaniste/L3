@@ -59,7 +59,6 @@ public class Client
 		try
 		{
 			Object o = input.readObject();
-			System.out.println("Je suis arrivé là");
 			if(o instanceof IdMessage)
 			{
 				return ((IdMessage)o).getID();

@@ -1,7 +1,5 @@
-import java.io.EOFException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.Socket;
 
@@ -10,23 +8,20 @@ public class Client
 	private static Socket sock;
 	private static ObjectOutputStream output;
 	private static ObjectInputStream input;
-	private static String metName;
-	@SuppressWarnings("rawtypes")
-	private static Class[] paramTypes;
-	private static Object[] param;
-	
+
 	public static void main(String[] args) 
 	{
 		try 
 		{
 			ouvrirConnexion("localhost", 7777);
-			int id=(int)addPersonne(new Personne("Roger",54));
+
+			int id=(int)makeRequest(new Personne("Roger",54), "addPersonne");
 			System.out.println("Roger a bien été ajouté avec l'id :"+id);
-			int id2=(int)addPersonne(new Personne("Jean-Pierre",62));
+			int id2=(int)makeRequest(new Personne("Jean-Pierre",62), "addPersonne");
 			System.out.println("Jean-Pierre a bien été ajouté avec l'id :"+id2);
-			/*System.out.println("La personne avec l'id "+id+" est "+getPersonne(id));
-			System.out.println("La personne avec l'id "+id2+" est "+getPersonne(id2));
-			System.out.println("Roger est à l'id "+getID(new Personne("Roger",54)));*/
+			System.out.println("La personne avec l'id "+id+" est "+(Personne)makeRequest(id, "getPersonne"));
+			System.out.println("La personne avec l'id "+id2+" est "+(Personne)makeRequest(id2, "getPersonne"));
+			System.out.println("Roger est à l'id "+(int)makeRequest(new Personne("Roger",54), "getID"));
 			
 		} 
 		catch (Exception e) 
@@ -43,15 +38,13 @@ public class Client
 		input=new ObjectInputStream(sock.getInputStream());
 	}
 	
-	@SuppressWarnings("unchecked")
-	public static Object addPersonne(Personne p) throws Exception
-	{
-		metName="addPersonne";
-		
-		paramTypes=new Class[1];
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static Object makeRequest(Object p, String metName) throws Exception
+	{		
+		Class[] paramTypes=new Class[1];
 		paramTypes[0]=p.getClass();
 		
-		param=new Object[1];		
+		Object[] param=new Object[1];		
 		param[0]=p;
 			
 		output.writeObject(new RequestMessage(metName,paramTypes, param));
@@ -59,45 +52,6 @@ public class Client
 		Object o = input.readObject();
 		return ((Message)o).getValue();
 	}
-	
-	/*public static int getID(Personne p) throws Exception
-	{
-		output.writeObject(new GetIdRequest(p));
-		
-		try
-		{
-			Object o = input.readObject();
-			System.out.println("Je suis arrivé là");
-			if(o instanceof IdMessage)
-			{
-				return ((IdMessage)o).getID();
-			}
-		}
-		catch (EOFException e)
-		{
-			e.printStackTrace();
-		}
-
-
-		
-		throw new Exception("Message non attendu");
-	}
-	
-	public static Personne getPersonne(int id) throws Exception
-	{
-		output.writeObject(new GetPersonneRequest(id));
-		Message m = (Message) input.readObject();
-		
-		if(m instanceof PersonneMessage)
-		{
-			return ((PersonneMessage) m).getPersonne();
-		}
-		if(m instanceof InvalidIdExceptionMessage)
-		{
-			throw ((InvalidIdExceptionMessage) m).getException();
-		}
-		throw new Exception("Message non attendu"+m);
-	}*/
 	
 	public static void fermerConnexion() throws Exception
 	{

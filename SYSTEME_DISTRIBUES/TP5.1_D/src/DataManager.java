@@ -20,17 +20,19 @@ public class DataManager
 		
 	}
 	
-	public Personne getPersonne(int id) throws InvalidIdException
+	public Personne getPersonne(Integer id)
 	{
+		Personne p;
 		try
 		{
-			Personne p=list.get(id);
-			return p;
+			p=list.get(id);
+			
 		}
-		catch(IndexOutOfBoundsException e)
+		catch (IndexOutOfBoundsException e)
 		{
-			throw new InvalidIdException();
+			p=null;
 		}
+		return p;
 	}
 	
 	public int getID(Personne p)

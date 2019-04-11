@@ -25,7 +25,6 @@ public class Serveur
 			{
 				e1.printStackTrace();
 			}
-			e.printStackTrace();
 		}
 
 	}
@@ -72,7 +71,6 @@ public class Serveur
 				{
 					RequestMessage m = (RequestMessage)input.readObject();
 					
-					
 					Method met = null;
 					Object result = null;
 					
@@ -93,27 +91,9 @@ public class Serveur
 					{
 					    e.printStackTrace();
 					}
-					catch(InvalidIdException e)
-					{
-						
-					}
 					
 										
-					output.writeObject(new Message(result));
-					
-
-					/*else if(m instanceof GetPersonneRequest)
-					{
-						try
-						{
-							Personne p = dm.getPersonne(((GetPersonneRequest) m).getID());
-							output.writeObject(new PersonneMessage(p));
-						}
-						catch(InvalidIdException e)
-						{
-							output.writeObject(new InvalidIdExceptionMessage(e));
-						}
-					}*/		
+					output.writeObject(new Message(result));	
 				}
 			}
 			catch(Exception e)

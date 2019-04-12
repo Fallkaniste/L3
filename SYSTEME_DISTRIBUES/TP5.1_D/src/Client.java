@@ -14,7 +14,7 @@ public class Client
 		try 
 		{
 			ouvrirConnexion("localhost", 7777);
-
+			System.out.println("kjdegjed");
 			int id=(int)makeRequest(new Personne("Roger",54), "addPersonne");
 			System.out.println("Roger a bien été ajouté avec l'id :"+id);
 			int id2=(int)makeRequest(new Personne("Jean-Pierre",62), "addPersonne");

@@ -39,6 +39,11 @@ public class AsynchronousDatagramSocket
 		return dp;
 	}
 	
+	public void close()
+	{
+		this.socket.close();
+	}
+	
 	public boolean available()
 	{
 		return buffer.avalaible()>=1;

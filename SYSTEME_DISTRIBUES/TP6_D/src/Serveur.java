@@ -26,25 +26,79 @@ public class Serveur
 			
 			Scanner in = new Scanner(System.in);
 			System.out.println("Reçevoir de manière :\n\t[0]Synchrone\n\t[1]Asynchrone\n");
-	        choice = in.nextLine();
 	        do
 	        {
+	        	if(iChoice!=-1)
+	        	{
+	        		System.out.println("Saisie incorrecte. " + iChoice + " n'est pas un nombre valide.");
+	        		iChoice=-1;
+	        	}
+	        	
+		        choice = in.nextLine();
+
 		        try
 		        {
 		        	iChoice=Integer.parseInt(choice);
 		        }
 		        catch (NumberFormatException e)
 		        {
-		        	System.out.println("Vous devez entrer un nombre.");
+		        	System.out.println("Saisie incorrecte. "+ choice + " n'est pas un nombre.");
 		        }
-	        } while(iChoice==-1);
-
-	        
-	        
+	        } while(!(iChoice==0 || iChoice==1));
+        
 			AsynchronousDatagramSocket socket =new AsynchronousDatagramSocket(port);
-			DatagramPacket dp = socket.synchronousReceive();
-			System.out.println(dp.getData()[0]);
+			DatagramPacket dp;
+			
+			if(iChoice==0)
+			{
+				dp= socket.synchronousReceive();
+				System.out.println("Reçu :"+(char)dp.getData()[0]);
+			}
+			else if(iChoice==1)
+			{
+				do
+				{
+					dp = socket.asynchronousReceive();
+					if(dp==null)
+					{
+						System.out.println("Aucun paquet reçu");
+					}
+					else
+					{
+						System.out.println("Reçu :"+(char)dp.getData()[0]);
+					}
+					
+					iChoice=-1;
+					System.out.println("Voulez vous tenter une nouvelle réception?\n\t[0]Oui\n\t[1]Non\n");
+			        do
+			        {
+			        	if(iChoice!=-1)
+			        	{
+			        		System.out.println("Saisie incorrecte. " + iChoice + " n'est pas un nombre valide.");
+			        		iChoice=-1;
+			        	}
+			        	
+				        choice = in.nextLine();
+
+				        try
+				        {
+				        	iChoice=Integer.parseInt(choice);
+				        }
+				        catch (NumberFormatException e)
+				        {
+				        	System.out.println("Saisie incorrecte. "+ choice + " n'est pas un nombre.");
+				        }
+			        } while(!(iChoice==0 || iChoice==1));
+			
+				} while(iChoice==0);
+				
+			}
+			
+	        in.close();
+	        
 			socket.close();
+			
+			
 		} 
 		catch (IOException e) 
 		{

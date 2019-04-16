@@ -67,16 +67,21 @@ public class AsynchronousDatagramSocket
 			
 			try
 			{
-				while(true)
+				while(!socket.isClosed())
 				{
+					sleep(500);
 					tab=new byte[60000];
 					dp=new DatagramPacket(tab,tab.length);
-					socket.receive(dp);
-					buffer.addElement(dp);
+					if(!socket.isClosed())
+					{
+						socket.receive(dp);
+						buffer.addElement(dp);
+					}
 				}
 			}
 			catch(Exception e)
 			{
+				System.out.println(socket.isClosed());
 				e.printStackTrace();
 			}
 		}

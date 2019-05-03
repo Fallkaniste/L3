@@ -1,6 +1,15 @@
 *.o
+
 *.out
+
 *.tar.xz
+
 *.png
+
 *.ali
+
 *.odt#
+*.tdo
+*.bak
+
+*.lck

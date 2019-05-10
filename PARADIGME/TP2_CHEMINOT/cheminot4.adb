@@ -1,44 +1,41 @@
 with TEXT_IO; use TEXT_IO;
 
-procedure Cheminot4 is
+procedure Cheminot3 is
 package int_io is new Integer_io(integer);
 use int_io;
 
 pierre1:boolean:=FALSE;
 pierre2:boolean:=FALSE;
+tour:integer:=1;
 
 task perou;
 task body perou is
 
 I:integer:=0;
 
-
 begin
 
-  --pour tester je prend 2 iterations par exemple et non pas une boucle infinie
-
-  for I in 1..10 loop
+  for J in 1..10 loop
     -- protocole d entree
-    Put_Line("Péruvien arrete train ");
-    loop
-      Put_Line("Péruvien met sa pierre");
-      pierre1:=TRUE;
-      if(pierre2=TRUE) then
-        pierre1:=FALSE;
-        Put_Line("Péruvien enleve sa pierre et fait la sieste");
-      else
-        exit;
-      end if;
+    Put_Line("Peruvien arrete son train et met sa pierre");
+    pierre1:=TRUE;
+    Put_Line("Péruvien donne le tour au Bolivien");
+    tour:=2;
+
+    --attente active
+    while(pierre2=TRUE and tour=2) loop
+      Put_Line("Peruvien fait la sieste");
     end loop;
 
-  -- process1 entre en SC
-  Put_Line("Péruvien passe");
+    -- <SC>
+    Put_Line("Peruvien passe");
+    -- <SC>
 
-  -- protocole de sortie
-  Put_Line("Peruvien retourne au panier");
-  Put_Line("Peruvien enleve sa pierre");
-  pierre1:=FALSE;
-  Put_Line("Peruvien repart");
+    -- protocole de sortie
+    Put_Line("Peruvien retourne au panier");
+    Put_Line("Peruvien enleve sa pierre");
+    pierre1:=FALSE;
+    Put_Line("Peruvien repart");
 
   end loop;
 end perou;
@@ -51,35 +48,30 @@ J:integer:=0;
 
 begin
 
-  --pour tester je prend 2 iterations par exemple et non pas une boucle infinie
-
   for I in 1..10 loop
     -- protocole d entree
-    Put_Line("Bolivien arrete train ");
-    loop
-      Put_Line("Bolivien met sa pierre");
-      pierre2:=TRUE;
-      if(pierre1=TRUE) then
-        pierre2:=FALSE;
-        Put_Line("Bolivien enleve sa pierre et fait la sieste");
-      else
-        exit;
-      end if;
+    Put_Line("Bolivien arrete son train et met sa pierre");
+    pierre2:=TRUE;
+    Put_Line("Bolivien donne le tour au Peruvien");
+    tour:=1;
+
+    --attente active
+    while(pierre1=TRUE and tour=1) loop
+      Put_Line("Bolivien fait la sieste");
     end loop;
 
-  -- process1 entre en SC
-  Put_Line("Bolivien passe");
+    -- <SC>
+    Put_Line("Bolivien passe");
+    -- <SC>
 
-  -- protocole de sortie
-  Put_Line("Bolivien retourne au panier");
-  Put_Line("Bolivien enleve sa pierre");
-  pierre2:=FALSE;
-  Put_Line("Bolivien repart");
-
+    -- protocole de sortie
+    Put_Line("Bolivien retourne au panier");
+    Put_Line("Bolivien enleve sa pierre");
+    pierre2:=FALSE;
+    Put_Line("Bolivien repart");
   end loop;
 end bolivie;
 
-
 begin
   Null;
-end Cheminot4;
+end Cheminot3;

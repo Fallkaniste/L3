@@ -15,26 +15,28 @@ I:integer:=0;
 
 begin
 
-  --pour tester je prend 2 iterations par exemple et non pas une boucle infinie
-
-  loop
+  for J in 1..10 loop
     -- protocole d entree
-    Put_Line("Peruvien arrete train et met sa pierre");
+    Put_Line("Peruvien arrete son train et met sa pierre");
     pierre1:=TRUE;
+
+    --attente active
     while(pierre2=TRUE) loop
-      pierre1:=FALSE;
       Put_Line("Peruvien enleve sa pierre et fait la sieste");
-      pierre1:=TRUE;
+      pierre1:=FALSE;
     end loop;
+    Put_Line("Peruvien remet sa pierre");
+    pierre1:=true;
 
-  -- process1 entre en SC
-  Put_Line("Peruvien passe");
+    -- <SC>
+    Put_Line("Peruvien passe");
+    -- <SC>
 
-  -- protocole de sortie
-  Put_Line("Peruvien retourne au panier");
-  Put_Line("Peruvien enleve sa pierre");
-  pierre1:=FALSE;
-  Put_Line("Peruvien repart");
+    -- protocole de sortie
+    Put_Line("Peruvien retourne au panier");
+    Put_Line("Peruvien enleve sa pierre");
+    pierre1:=FALSE;
+    Put_Line("Peruvien repart");
 
   end loop;
 end perou;
@@ -47,20 +49,22 @@ J:integer:=0;
 
 begin
 
-  --pour tester je prend 2 iterations par exemple et non pas une boucle infinie
-
-  loop
+  for I in 1..10 loop
     -- protocole d entree
     Put_Line("Bolivien arrete train et met sa pierre");
     pierre2:=TRUE;
-    while(pierre1=TRUE) loop
-      pierre2:=FALSE;
-      Put_Line("Bolivien enleve sa pierre et fait la sieste");
-      pierre2:=TRUE;
-    end loop;
 
-  -- process1 entre en SC
+    --attente active
+    while(pierre1=TRUE) loop
+      Put_Line("Bolivien enleve sa pierre et fait la sieste");
+      pierre2:=FALSE;
+    end loop;
+    Put_Line("Bolivien remet sa pierre")
+    pierre1:=true;
+
+  -- <SC>
   Put_Line("Bolivien passe");
+  -- <SC>
 
   -- protocole de sortie
   Put_Line("Bolivien retourne au panier");

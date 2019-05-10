@@ -8,6 +8,7 @@ int main()
   ip_mreq grMulticast;
   int reuse = 1;
   sockaddr_in adrMulticast;
+  static sockaddr_in adrMulticast;
   char rBuffer[sizeof(info_client)];
   socklen_t tailleAdrClient;
   int nbClients=0;
@@ -43,6 +44,9 @@ int main()
   adrMulticast.sin_port = htons(MULTICAST_PORT);
   bind(socketMulticast, (struct sockaddr*)&adrMulticast, sizeof(sockaddr_in));
 
+  //Init Buffer
+  bzero((char*)infoClients, 4*sizeof(info_client));
+
   //Réception message
   if(recvfrom(socketMulticast,rBuffer,sizeof(info_client),0,(struct sockaddr *) &adrMulticast,&tailleAdrClient)!=sizeof(info_client))
   {
@@ -53,7 +57,10 @@ int main()
   bzero((char*)infoClients, 4*sizeof(info_client));
   memcpy(&infoClients[nbClients],rBuffer,sizeof(info_client));
   printf("pseudo:%s\n",infoClients[0].pseudo);
+  id=makeID(infoClients[nbClients].pseudo, nbClients);
+  printf("Nouveau client! Pseudo:%s#%d\n",infoClients[nbClients].pseudo, id);
   nbClients++;
+
 
   //Remplissage du buffer d'envoi
   bzero(wBuffer,2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client));
@@ -61,9 +68,14 @@ int main()
   memcpy(&wBuffer,&id,sizeof(int));
   memcpy(&wBuffer+sizeof(int),&nbClients,sizeof(int));
   printf("wBuffer:%d\n", sizeof(wBuffer));
+
+
+  memcpy(wBuffer,&id,sizeof(int));
+  memcpy(wBuffer+sizeof(int),&nbClients,sizeof(int));
   for(int i=0; i<nbClients; i++)
   {
     memcpy(&wBuffer+(2*sizeof(int))+(i*sizeof(info_client)),&infoClients[i],sizeof(info_client));
+    memcpy(wBuffer+(2*sizeof(int))+(i*sizeof(info_client)),&infoClients[i],sizeof(info_client));
   }
 
   //Envoi au client

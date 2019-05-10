@@ -3,7 +3,7 @@
 int creerSocketTCP(int port)
 {
   int sock;
-  static struct sockaddr_in addr;
+  struct sockaddr_in addr;
 
   sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock == -1)

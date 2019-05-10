@@ -1,7 +1,7 @@
 #include "common.h"
 
-#define EOOF 133
-#define ENAN 134
+#define ENAN 133
+#define EOOF 134
 
 void helpMessage();
 void versionMessage();
@@ -11,18 +11,18 @@ int main(int argc, char** argv)
 {
   char pseudo[L_PSEUDO_MAX]="Anonyme";
   int socketEcoute;
-  sockaddr_in adrEcoute;
+  static sockaddr_in adrEcoute;
   socklen_t tailleAdr;
   int socketMulticast;
-  sockaddr_in adrMulticast;
-  info_client infoClient;
+  static sockaddr_in adrMulticast;
+  static info_client infoClient;
   int socketServiceServeur;
-  sockaddr_in adrServeur;
+  static sockaddr_in adrServeur;
   int socketsService[NB_CLIENT_MAX];
   char buffer[2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client)];
   int id;
   int nbClients;
-  info_client infoClients[NB_CLIENT_MAX];
+  static info_client infoClients[NB_CLIENT_MAX];
 
   //Création socket écoute
   socketEcoute = creerSocketTCP(0);
@@ -45,8 +45,10 @@ int main(int argc, char** argv)
   adrMulticast.sin_port = htons(MULTICAST_PORT);
 
   //Envoi des infos clients
-  infoClient.adr=adrEcoute;
+  memcpy(&infoClient.adr, &adrEcoute, sizeof(sockaddr_in));
   strcpy(infoClient.pseudo, pseudo);
+
+
   if(sendto(socketMulticast,&infoClient,sizeof(info_client),0,(struct sockaddr*) &adrMulticast,sizeof(sockaddr_in))!=sizeof(infoClient))
   {
     //TODO gestion erreur
@@ -65,8 +67,8 @@ int main(int argc, char** argv)
     //TODO gestion erreur
     printf("erreur accept");
   }
-  bzero(buffer,2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client));
 
+  bzero(buffer,2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client));
   while(read(socketServiceServeur,buffer,2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client)) != 2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client))
   {
     //TODO gestion erreur
@@ -77,10 +79,9 @@ int main(int argc, char** argv)
   memcpy(&nbClients,buffer+sizeof(int),sizeof(int));
   for(int i=0; i<nbClients; i++)
   {
-      memcpy(&infoClients+i*sizeof(info_client),buffer+2*sizeof(int)+i*sizeof(info_client),sizeof(info_client));
+    memcpy(&infoClients[i], buffer+2*sizeof(int)+i*sizeof(info_client),sizeof(info_client));
   }
 
-  printf("buffer:%d\n", sizeof(buffer));
   printf("id:%d,nbClients:%d\n\n==LISTE PSEUDOS==\n", id, nbClients);
   printf("pseudo:%s\n",infoClients[0].pseudo);
   close(socketServiceServeur);

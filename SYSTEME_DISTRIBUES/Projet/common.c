@@ -21,5 +21,6 @@ int creerSocketTCP(int port)
     perror("erreur bind socket");
     exit(1);
   }
+
   return sock;
 }

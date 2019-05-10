@@ -36,7 +36,7 @@ Begin
   for J in 1..10 loop
   -- attente active:
   while (P1inside) loop
-    Put_Line("Process1 en attente");
+    Put_Line("Process2 en attente");
   end loop;
   P2inside:=TRUE;
     -- <SC>

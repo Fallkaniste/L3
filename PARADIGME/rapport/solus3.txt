@@ -1,0 +1,105 @@
+with TEXT_IO; use TEXT_IO;
+procedure brutal is
+package int_io is new Integer_io(integer);
+use int_io;
+
+tour:integer:=1;
+demande1:boolean:=FALSE;
+demande2:boolean:=FALSE;
+demande3:boolean:=FALSE;
+
+task processus1;
+task body processus1 is
+
+I:integer:=0;
+
+begin
+  for I in 1..2 loop
+    -- protocole d'entree:
+    demande1:=TRUE;
+    if(demande2=TRUE and demande3=FALSE) then
+        tour:=2;
+    else if (demande3=TRUE and demande2=TRUE) then
+        tour:=3;
+        end if;
+    end if;
+    if(demande2=TRUE and demande3=TRUE)then
+        tour:=1;
+    end if;
+    --attente active:
+    while (tour/=1) and (demande2=TRUE or demande3=TRUE) loop
+      Put_Line("Process1 en attente");
+    end loop;
+    -- <SC>
+  Put_Line ("Process1 en SC");
+    -- <SC>
+  -- protocole de sortie:
+  demande1:=FALSE;
+  end loop;
+end processus1;
+
+
+task processus2;
+task body processus2 is
+
+J:integer:=0;
+
+begin
+  for J in 1..2 loop
+    -- protocole d'entree:
+    demande2:=TRUE;
+    if(demande3=TRUE and demande1=FALSE) then
+        tour:=3;
+    else if (demande1=TRUE and demande3=FALSE) then
+        tour:=1;
+        end if;
+    end if;
+    if(demande3=TRUE and demande1=TRUE) then
+        tour:=1;
+    end if;
+    --attente active:
+    while (tour/=2) and (demande1=TRUE or demande3=TRUE) loop
+      Put_Line("Process2 en attente");
+    end loop;
+    -- <SC>
+  Put_Line ("Process2 en SC");
+    -- <SC>
+  -- protocole de sortie:
+  demande2:=FALSE;
+  end loop;
+end processus2;
+
+task processus3;
+task body processus3 is
+
+K:integer:=0;
+
+begin
+  for K in 1..2 loop
+    -- protocole d'entree:
+    demande3:=TRUE;
+    if(demande1=TRUE and demande2=FALSE) then
+        tour:=1;
+    else if (demande2=TRUE and demande1=FALSE) then
+        tour:=2;
+        end if;
+    end if;
+    if(demande1=TRUE and demande2=TRUE) then
+        tour:=1;
+    end if;
+    --attente active:
+    while (tour/=3) and (demande1=TRUE or demande2=TRUE) loop
+      Put_Line("Process3 en attente");
+    end loop;
+    -- <SC>
+  Put_Line ("Process3 en SC");
+    -- <SC>
+  -- protocole de sortie:
+  demande3:=FALSE;
+  end loop;
+end processus3;
+
+
+begin
+  Null;
+end brutal;

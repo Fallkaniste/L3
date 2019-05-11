@@ -5,25 +5,22 @@ package int_io is new Integer_io(integer);
 use int_io;
 
 
-Demand: array(0..1) of Boolean := (others => FALSE);--Je cré un tableau de booleen.
+Demande: array(0..1) of Boolean := (others => FALSE);
 Tour:Integer:=0;
 J:Integer:=0;
-
-subtype Process_num is Integer range 0..1; -- Je créer un sous type d'entier ne comprenant que 1 et 0.
-subtype NumTour is Integer range 1..10; -- Je créer un sous type d'entier ne comprenant l'inteval de 1 a 5.
 
 procedure Entre(I: in Integer) is 
 begin
   J:=(I+1) mod 2;
-  Demand(i):=TRUE;
+  Demande(i):=TRUE;
   Tour:=J;
-  while (Demand(J)=True and Tour /= 1) loop null;
+  while (Demande(J)=True and Tour /= 1) loop null;
 end loop;
 end Entre;
 
 procedure Sortie(I: in Integer) is
 begin
-  Demand(i):=FALSE;
+  Demande(i):=FALSE;
 end Sortie;
 
 
@@ -31,18 +28,18 @@ task Process1;
 task body Process1 is
 
   begin
-    for I in NumTour loop
+    for I in 0..5 loop
       Entre(0);
       Put_Line("Process1 en Section Critique");
       Sortie(0);
     end loop;
   end Process1;
 
-  task Process2;
-  task body Process2 is
+ task Process2;
+ task body Process2 is
 
     begin
-      for I in NumTour loop
+      for I in 0.05 loop
         Entre(1);
         Put_Line("Process2 en Section Critique");
         Sortie(1);

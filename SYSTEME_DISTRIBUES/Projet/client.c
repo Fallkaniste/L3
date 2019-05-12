@@ -5,30 +5,33 @@
 
 void helpMessage();
 void versionMessage();
-int stringToInt(char* optarg);
+void gestionArret();
+
+int socketMulticast;
+int socketEcoute;
+static sockaddr_in adrMulticast;
+int id;
 
 int main(int argc, char** argv)
 {
   char pseudo[L_PSEUDO_MAX]="Anonyme";
-  int socketEcoute;
-  static sockaddr_in adrEcoute;
+  sockaddr_in adrEcoute;
   socklen_t tailleAdr;
-  int socketMulticast;
-  static sockaddr_in adrMulticast;
-  static info_client infoClient;
+
+  info_client infoClient;
   int socketServiceServeur;
-  static sockaddr_in adrServeur;
-  int socketsService[NB_CLIENT_MAX];
+  sockaddr_in adrServeur;
   char buffer[2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client)];
-  int id;
   int nbClients;
-  static info_client infoClients[NB_CLIENT_MAX];
+  info_client infoClients[NB_CLIENT_MAX];
+  int nbOctets;
 
   //Création socket écoute
   socketEcoute = creerSocketTCP(0);
+  tailleAdr=sizeof(sockaddr_in);
   if(getsockname(socketEcoute,(struct sockaddr*)&adrEcoute,&tailleAdr) == -1)
   {
-    //TODO gestion erreur
+    perror("getsockname");
   }
 
   //Création socket service multicast
@@ -48,43 +51,77 @@ int main(int argc, char** argv)
   memcpy(&infoClient.adr, &adrEcoute, sizeof(sockaddr_in));
   strcpy(infoClient.pseudo, pseudo);
 
-
   if(sendto(socketMulticast,&infoClient,sizeof(info_client),0,(struct sockaddr*) &adrMulticast,sizeof(sockaddr_in))!=sizeof(infoClient))
   {
-    //TODO gestion erreur
+    perror("send");
   }
-  close(socketMulticast);
 
   //Réception de la réponse du serveur
   if(listen(socketEcoute,NB_CLIENT_MAX) == -1)
   {
-    //TODO gestion erreur
-    printf("erreur listen");
+    perror("listen");
   }
 
   if((socketServiceServeur = accept(socketEcoute,(struct sockaddr*)&adrServeur, &tailleAdr)) == -1)
   {
-    //TODO gestion erreur
-    printf("erreur accept");
+    perror("accept");
   }
 
   bzero(buffer,2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client));
-  while(read(socketServiceServeur,buffer,2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client)) != 2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client))
+  do
   {
-    //TODO gestion erreur
-    printf("erreur lecture!");
-  }
+    nbOctets=read(socketServiceServeur,buffer,2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client));
+  } while(nbOctets == -1);
 
-  memcpy(&id,buffer,sizeof(int));
-  memcpy(&nbClients,buffer+sizeof(int),sizeof(int));
-  for(int i=0; i<nbClients; i++)
-  {
-    memcpy(&infoClients[i], buffer+2*sizeof(int)+i*sizeof(info_client),sizeof(info_client));
-  }
-
-  printf("id:%d,nbClients:%d\n\n==LISTE PSEUDOS==\n", id, nbClients);
-  printf("pseudo:%s\n",infoClients[0].pseudo);
   close(socketServiceServeur);
+
+  if(nbOctets==2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client))
+  {
+    memcpy(&id,buffer,sizeof(int));
+    memcpy(&nbClients,buffer+sizeof(int),sizeof(int));
+    printf(BOLD "NOMBRE DE JOUEURS:" FONT_RESET COLOR_RED " %d\n\n" COLOR_RESET BOLD "LISTE JOUEURS\n" FONT_RESET, nbClients);
+    for(int i=0; i<nbClients; i++)
+    {
+      memcpy(&infoClients[i], buffer+2*sizeof(int)+i*sizeof(info_client),sizeof(info_client));
+
+      printf(UNDERLINE "%d:" FONT_RESET "%s#%d",i+1,infoClients[i].pseudo,infoClients[i].id);
+      if(id!=infoClients[i].id)
+      {
+        printf("\n");
+      }
+      else
+      {
+        printf(COLOR_GREEN " (Vous)\n" COLOR_RESET);
+      }
+    }
+    printf("\n");
+
+    signal(SIGINT, gestionArret);
+    while(1)
+    {
+      //TODO JEU
+    }
+  }
+  else if(nbOctets==sizeof(int))
+  {
+    memcpy(&id,buffer,sizeof(int));
+    switch(id)
+    {
+      case -1:
+        printf(COLOR_RED "Connection refusée :" COLOR_RESET " Aucune place disponible.\n");
+        break;
+      default:
+        printf("ERREUR REPONSE INATTENDUE\n");
+        exit(EXIT_FAILURE);
+    }
+  }
+  else
+  {
+    printf("ERREUR REPONSE INATTENDUE\n");
+    exit(EXIT_FAILURE);
+  }
+
+
 
   /*for(int i=0; i<nbClients; i++)
   {
@@ -145,22 +182,15 @@ int main(int argc, char** argv)
   return 0;
 }
 
-int stringToInt(char* optarg)
+void gestionArret()
 {
-  char* endptr=NULL;
-  long value=strtol(optarg, &endptr, 10);
-
-  if (endptr!=optarg+strlen(optarg))
+  printf(COLOR_RED "Arrêt du jeu...\n" COLOR_RESET);
+  close(socketEcoute);
+  if(sendto(socketMulticast,&id,sizeof(int),0,(struct sockaddr*) &adrMulticast,sizeof(sockaddr_in))==sizeof(int))
   {
-    errno=ENAN;
-    fprintf(stderr, "ENAN\n");
+    printf(BOLD "Terminé.\n" FONT_RESET);
   }
-  if(value>=INT_MAX||value<=INT_MIN)
-  {
-    errno=EOOF;
-    fprintf(stderr, "EOOF\n");
-  }
-  return (int)value;
+  exit(EXIT_SUCCESS);
 }
 
 void helpMessage()

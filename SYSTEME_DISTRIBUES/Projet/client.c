@@ -92,7 +92,6 @@ int main(int argc, char** argv)
       if(infoClients[i].id!=id)
       {
         socketClients[j] = creerSocketTCP(0);
-        printf("%d\n",socketClients[j]);
         if(connect(socketClients[j],(sockaddr*)&infoClients[i].adr,(socklen_t)sizeof(sockaddr))==-1)
         {
           perror("connect");
@@ -106,10 +105,9 @@ int main(int argc, char** argv)
         j++;
       }
     }
-    signal(SIGINT, gestionArret);
+
     while(nbClients<4)
     {
-      printf("nbClients:%d\n",nbClients);
       socketClients[nbClients-1] = accept(socketEcoute,(sockaddr*)&infoClients[nbClients-1].adr,&(socklen_t){sizeof(sockaddr)});
       if (socketClients[nbClients-1]==-1)
       {
@@ -126,11 +124,11 @@ int main(int argc, char** argv)
         memcpy(&infoClients[nbClients], buffer, sizeof(info_client));
         nbClients++;
       }
-      printf("%d\n",socketClients[nbClients-1]);
       afficherClients(infoClients, nbClients, id);
 
     }
 
+    signal(SIGINT, gestionArret);
     while(1)
     {
 
@@ -140,8 +138,15 @@ int main(int argc, char** argv)
         nbOctets=read(socketClients[i],buffer,sizeof(int));
         if(nbOctets==sizeof(int))
         {
-          tmp=-1;
           memcpy(&tmp, buffer, sizeof(int));
+
+          printf("i:%d\n", i);
+          for(int o=0; o<NB_CLIENT_MAX-1; o++)
+          {
+            printf("socket1:%d\n", socketClients[o]);
+          }
+          printf("tmp:%d\n", tmp);
+          getchar();
           for(int j=0; j<nbClients; j++)
           {
             if(infoClients[j].id==tmp)
@@ -156,11 +161,9 @@ int main(int argc, char** argv)
               nbClients--;
             }
           }
+          printf("%d removed.",tmp);
+          getchar();
           afficherClients(infoClients, nbClients, id);
-          if(tmp==-1)
-          {
-            //TODO gérér autre chose
-          }
         }
       }
     }

@@ -122,8 +122,8 @@ int main()
           if(id==infoClients[i].id)
           {
             printf("Le joueur #%d s'est déconnecté.\n", id);
+            removeClient(infoClients, nbClients, id);
             nbClients--;
-
           }
         }
       }

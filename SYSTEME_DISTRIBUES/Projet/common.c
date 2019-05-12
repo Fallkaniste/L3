@@ -39,3 +39,36 @@ int calculerID(char* pseudo, int nbClients)
   }
   return id;
 }
+
+void afficherClients(info_client infoClients[], int nbClients, int id)
+{
+  system("clear");
+  printf(BOLD "NOMBRE DE JOUEURS:" FONT_RESET COLOR_RED " %d\n\n" COLOR_RESET BOLD "LISTE JOUEURS\n" FONT_RESET, nbClients);
+  for(int i=0; i<nbClients; i++)
+  {
+    printf(UNDERLINE "%d:" FONT_RESET "%s#%04d",i+1,infoClients[i].pseudo,infoClients[i].id);
+    if(id!=infoClients[i].id)
+    {
+      printf("\n");
+    }
+    else
+    {
+      printf(COLOR_GREEN " (Vous)\n" COLOR_RESET);
+    }
+  }
+  printf("\n");
+}
+
+void removeClient(info_client infoClients[], int nbClients, int id)
+{
+  for(int i=0; i<nbClients; i++)
+  {
+    if(infoClients[i].id == id)
+    {
+      for(int j=i; j<nbClients-1; j++)
+      {
+        infoClients[j]=infoClients[j+1];
+      }
+    }
+  }
+}

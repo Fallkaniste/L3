@@ -1,7 +1,7 @@
 #include "common.h"
 
-#define ENAN 133
-#define EOOF 134
+//TODO faire une structure id+socket et les fonctions qui vont avec pour savoir quelle socket supprimer.
+
 
 void helpMessage();
 void versionMessage();
@@ -9,27 +9,26 @@ void gestionArret();
 
 int socketMulticast;
 int socketEcoute;
-static sockaddr_in adrMulticast;
+sockaddr_in adrMulticast;
 int id;
+int nbClients;
+info_client infoClients[NB_CLIENT_MAX];
+int socketClients[NB_CLIENT_MAX-1];
 
 int main(int argc, char** argv)
 {
   char pseudo[L_PSEUDO_MAX]="Anonyme";
   sockaddr_in adrEcoute;
-  socklen_t tailleAdr;
-
   info_client infoClient;
-  int socketServiceServeur;
   sockaddr_in adrServeur;
+  int socketServiceServeur;
   char buffer[2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client)];
-  int nbClients;
-  info_client infoClients[NB_CLIENT_MAX];
   int nbOctets;
+  int tmp;
 
   //Création socket écoute
   socketEcoute = creerSocketTCP(0);
-  tailleAdr=sizeof(sockaddr_in);
-  if(getsockname(socketEcoute,(struct sockaddr*)&adrEcoute,&tailleAdr) == -1)
+  if(getsockname(socketEcoute,(struct sockaddr*)&adrEcoute,&(socklen_t){sizeof(sockaddr_in)}) == -1)
   {
     perror("getsockname");
   }
@@ -48,7 +47,7 @@ int main(int argc, char** argv)
   adrMulticast.sin_port = htons(MULTICAST_PORT);
 
   //Envoi des infos clients
-  memcpy(&infoClient.adr, &adrEcoute, sizeof(sockaddr_in));
+  infoClient.adr=adrEcoute;
   strcpy(infoClient.pseudo, pseudo);
 
   if(sendto(socketMulticast,&infoClient,sizeof(info_client),0,(struct sockaddr*) &adrMulticast,sizeof(sockaddr_in))!=sizeof(infoClient))
@@ -62,9 +61,10 @@ int main(int argc, char** argv)
     perror("listen");
   }
 
-  if((socketServiceServeur = accept(socketEcoute,(struct sockaddr*)&adrServeur, &tailleAdr)) == -1)
+  socketServiceServeur = accept(socketEcoute,(sockaddr*)&adrServeur,&(socklen_t){sizeof(sockaddr)});
+  if(socketServiceServeur==-1);
   {
-    perror("accept");
+    perror("accept1");
   }
 
   bzero(buffer,2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client));
@@ -78,28 +78,91 @@ int main(int argc, char** argv)
   if(nbOctets==2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client))
   {
     memcpy(&id,buffer,sizeof(int));
+    infoClient.id=id;
     memcpy(&nbClients,buffer+sizeof(int),sizeof(int));
-    printf(BOLD "NOMBRE DE JOUEURS:" FONT_RESET COLOR_RED " %d\n\n" COLOR_RESET BOLD "LISTE JOUEURS\n" FONT_RESET, nbClients);
     for(int i=0; i<nbClients; i++)
     {
       memcpy(&infoClients[i], buffer+2*sizeof(int)+i*sizeof(info_client),sizeof(info_client));
+    }
+    afficherClients(infoClients, nbClients, id);
 
-      printf(UNDERLINE "%d:" FONT_RESET "%s#%d",i+1,infoClients[i].pseudo,infoClients[i].id);
-      if(id!=infoClients[i].id)
+    int j=0;
+    for(int i=0; i<nbClients; i++)
+    {
+      if(infoClients[i].id!=id)
       {
-        printf("\n");
-      }
-      else
-      {
-        printf(COLOR_GREEN " (Vous)\n" COLOR_RESET);
+        socketClients[j] = creerSocketTCP(0);
+        printf("%d\n",socketClients[j]);
+        if(connect(socketClients[j],(sockaddr*)&infoClients[i].adr,(socklen_t)sizeof(sockaddr))==-1)
+        {
+          perror("connect");
+        }
+
+        if(write(socketClients[j],&infoClient,sizeof(info_client))==-1)
+        {
+          perror("write");
+        }
+
+        j++;
       }
     }
-    printf("\n");
-
     signal(SIGINT, gestionArret);
+    while(nbClients<4)
+    {
+      printf("nbClients:%d\n",nbClients);
+      socketClients[nbClients-1] = accept(socketEcoute,(sockaddr*)&infoClients[nbClients-1].adr,&(socklen_t){sizeof(sockaddr)});
+      if (socketClients[nbClients-1]==-1)
+      {
+        perror("accept2");
+      }
+
+      bzero(buffer,sizeof(info_client));
+      do
+      {
+        nbOctets=read(socketClients[nbClients-1],buffer,sizeof(info_client));
+      } while(nbOctets == -1);
+      if(nbOctets==sizeof(info_client))
+      {
+        memcpy(&infoClients[nbClients], buffer, sizeof(info_client));
+        nbClients++;
+      }
+      printf("%d\n",socketClients[nbClients-1]);
+      afficherClients(infoClients, nbClients, id);
+
+    }
+
     while(1)
     {
-      //TODO JEU
+
+      for(int i=0; i<nbClients-1; i++)
+      {
+        bzero(buffer, sizeof(int));
+        nbOctets=read(socketClients[i],buffer,sizeof(int));
+        if(nbOctets==sizeof(int))
+        {
+          tmp=-1;
+          memcpy(&tmp, buffer, sizeof(int));
+          for(int j=0; j<nbClients; j++)
+          {
+            if(infoClients[j].id==tmp)
+            {
+              //TODO URGENT!!! DECALER LE TABLEAU SOCKET
+              for(int k=i;k<nbClients-2; k++)
+              {
+                socketClients[k]=socketClients[k+1];
+              }
+
+              removeClient(infoClients, nbClients, tmp);
+              nbClients--;
+            }
+          }
+          afficherClients(infoClients, nbClients, id);
+          if(tmp==-1)
+          {
+            //TODO gérér autre chose
+          }
+        }
+      }
     }
   }
   else if(nbOctets==sizeof(int))
@@ -121,64 +184,6 @@ int main(int argc, char** argv)
     exit(EXIT_FAILURE);
   }
 
-
-
-  /*for(int i=0; i<nbClients; i++)
-  {
-    printf("pseudo:%s\n",infoClients[i].pseudo);
-  }*/
-  /*int opt=0;
-  int port;
-  char* hostname;
-
-  do
-  {
-    opt=getopt_long(argc,argv,"hv", options,NULL);
-    switch(opt)
-    {
-      case 'h':
-        helpMessage();
-        exit(EXIT_SUCCESS);
-      case 'v':
-        versionMessage();
-        exit(EXIT_SUCCESS);
-      default:
-        if(argc==3)
-        {
-          hostname=argv[1];
-          port=stringToInt(argv[2]);
-          break;
-        }
-        break;
-    }
-  } while(opt!=-1);
-
-
-  int choix=-1;
-
-  while(choix!=3)
-  {
-    choix=-1;
-
-    do
-    {
-      printf("TODO"); //TODO
-      scanf("%d", &choix);
-    } while(choix<0 || choix>3);
-
-    switch(choix)
-    {
-      case 0:
-        break;
-      case 1:
-        break;
-      case 2:
-        break;
-      case 3:
-        break;
-    }
-  }*/
-
   return 0;
 }
 
@@ -189,6 +194,16 @@ void gestionArret()
   if(sendto(socketMulticast,&id,sizeof(int),0,(struct sockaddr*) &adrMulticast,sizeof(sockaddr_in))==sizeof(int))
   {
     printf(BOLD "Terminé.\n" FONT_RESET);
+  }
+
+  for(int i=0; i<nbClients-1; i++)
+  {
+    printf("written");
+    if(write(socketClients[i],&id,sizeof(int))==-1)
+    {
+      perror("write");
+    }
+    close(socketClients[i]);
   }
   exit(EXIT_SUCCESS);
 }
@@ -205,3 +220,60 @@ void versionMessage()
 {
   printf("cdc-client 1.0\nCopyright (C) 2019 Croquefer Gaëtan and Amiard Landry.\nWritten by Croquefer Gaëtan <gaetan.croquefer@etud.univ-pau.fr> and Amiard Landry <landry.amiard@etud.univ-pau.fr>.\n");
 }
+
+
+/*GET OPTfor(int i=0; i<nbClients; i++)
+{
+  printf("pseudo:%s\n",infoClients[i].pseudo);
+}*/
+/*int opt=0;
+int port;
+char* hostname;
+
+do
+{
+  opt=getopt_long(argc,argv,"hv", options,NULL);
+  switch(opt)
+  {
+    case 'h':
+      helpMessage();
+      exit(EXIT_SUCCESS);
+    case 'v':
+      versionMessage();
+      exit(EXIT_SUCCESS);
+    default:
+      if(argc==3)
+      {
+        hostname=argv[1];
+        port=stringToInt(argv[2]);
+        break;
+      }
+      break;
+  }
+} while(opt!=-1);
+
+
+int choix=-1;
+
+while(choix!=3)
+{
+  choix=-1;
+
+  do
+  {
+    printf("TODO"); //TODO
+    scanf("%d", &choix);
+  } while(choix<0 || choix>3);
+
+  switch(choix)
+  {
+    case 0:
+      break;
+    case 1:
+      break;
+    case 2:
+      break;
+    case 3:
+      break;
+  }
+}*/

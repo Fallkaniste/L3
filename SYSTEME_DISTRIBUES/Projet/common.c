@@ -1,4 +1,5 @@
 #include "common.h"
+#include <math.h>
 
 int creerSocketTCP(int port)
 {
@@ -27,33 +28,14 @@ int creerSocketTCP(int port)
 
 int calculerID(char* pseudo, int nbClients)
 {
-  //TODO use system time
-
-  int i=0;
   int id=0;
 
-  if(pseudo!=NULL)
+  id+=nbClients+1;
+  time_t currentTime=time(NULL);
+  for(int i=0; i<4; i++)
   {
-    do
-    {
-      i++;
-      if(pseudo[i]!='\0')
-      {
-        id+=pseudo[i];
-      }
-      else
-      {
-        break;
-      }
-    } while(i<L_PSEUDO_MAX);
-    id+=nbClients+1;
-    time_t currentTime=time(NULL);
-    while (currentTime > 0)
-    {
-     id+=(int)currentTime%10L;
-     currentTime /= 10L;
-    }
-    return id;
+    id+=(currentTime%10)*pow(10,i);
+    currentTime /= 10;
   }
-  return -1;
+  return id;
 }

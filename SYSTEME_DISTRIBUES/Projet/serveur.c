@@ -54,14 +54,13 @@ int main()
     nbOctets=read(socketMulticast,rBuffer,sizeof(info_client));
     if(nbOctets==sizeof(info_client))
     {
-      printf("Nouveau client!");
       if(nbClients<4)
       {
         //Ajout des infos du client dans la liste
         memcpy(&infoClients[nbClients],rBuffer,sizeof(info_client));
         id=calculerID(infoClients[nbClients].pseudo, nbClients);
         infoClients[nbClients].id=id;
-        printf(" Pseudo:%s#%d\n",infoClients[nbClients].pseudo, id);
+        printf("Nouveau client! Pseudo:%s#%d\n",infoClients[nbClients].pseudo, id);
         nbClients++;
 
         //Remplissage du buffer d'envoi
@@ -89,7 +88,7 @@ int main()
       }
       else
       {
-        printf(" Nombre de connexions maximal atteint.\n");
+        printf("Nombre de connexions maximal atteint.\n");
 
         memcpy(&tmp,rBuffer,sizeof(info_client));
 

@@ -62,17 +62,15 @@ int main(int argc, char** argv)
   }
 
   socketServiceServeur = accept(socketEcoute,(sockaddr*)&adrServeur,&(socklen_t){sizeof(sockaddr)});
-  if(socketServiceServeur==-1);
-  {
-    perror("accept1");
-  }
 
   bzero(buffer,2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client));
-  do
+  nbOctets=read(socketServiceServeur,buffer,2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client));
+  if(nbOctets==-1)
   {
-    nbOctets=read(socketServiceServeur,buffer,2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client));
-  } while(nbOctets == -1);
+    perror("readServer");
+  }
 
+  //TODO le serveur nous signalera le début de partie, donc il faut pas close mtn
   close(socketServiceServeur);
 
   if(nbOctets==2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client))
@@ -94,76 +92,70 @@ int main(int argc, char** argv)
         socketClients[j] = creerSocketTCP(0);
         if(connect(socketClients[j],(sockaddr*)&infoClients[i].adr,(socklen_t)sizeof(sockaddr))==-1)
         {
-          perror("connect");
+          perror("connectClient");
         }
 
         if(write(socketClients[j],&infoClient,sizeof(info_client))==-1)
         {
-          perror("write");
+          perror("writeClient");
         }
-
+        fcntl(socketClients[j], F_SETFL, O_NONBLOCK);
         j++;
       }
     }
 
-    while(nbClients<4)
-    {
-      socketClients[nbClients-1] = accept(socketEcoute,(sockaddr*)&infoClients[nbClients-1].adr,&(socklen_t){sizeof(sockaddr)});
-      if (socketClients[nbClients-1]==-1)
-      {
-        perror("accept2");
-      }
-
-      bzero(buffer,sizeof(info_client));
-      do
-      {
-        nbOctets=read(socketClients[nbClients-1],buffer,sizeof(info_client));
-      } while(nbOctets == -1);
-      if(nbOctets==sizeof(info_client))
-      {
-        memcpy(&infoClients[nbClients], buffer, sizeof(info_client));
-        nbClients++;
-      }
-      afficherClients(infoClients, nbClients, id);
-
-    }
-
     signal(SIGINT, gestionArret);
+    fcntl(socketEcoute, F_SETFL, O_NONBLOCK);
     while(1)
     {
-
-      for(int i=0; i<nbClients-1; i++)
+      tmp=-1;
+      if(nbClients<4)
       {
-        bzero(buffer, sizeof(int));
-        nbOctets=read(socketClients[i],buffer,sizeof(int));
-        if(nbOctets==sizeof(int))
+        tmp=accept(socketEcoute,(sockaddr*)&infoClients[nbClients-1].adr,&(socklen_t){sizeof(sockaddr)});
+      }
+
+      if(tmp!=-1)
+      {
+        socketClients[nbClients-1]=tmp;
+        fcntl(socketClients[nbClients-1], F_SETFL, O_NONBLOCK);
+
+        bzero(buffer,sizeof(info_client));
+        do
         {
-          memcpy(&tmp, buffer, sizeof(int));
-
-          printf("i:%d\n", i);
-          for(int o=0; o<NB_CLIENT_MAX-1; o++)
+          nbOctets=read(socketClients[nbClients-1],buffer,sizeof(info_client));
+        } while(nbOctets == -1);
+        if(nbOctets==sizeof(info_client))
+        {
+          memcpy(&infoClients[nbClients], buffer, sizeof(info_client));
+          nbClients++;
+        }
+        afficherClients(infoClients, nbClients, id);
+      }
+      else
+      {
+        for(int i=0; i<nbClients-1; i++)
+        {
+          bzero(buffer, sizeof(int));
+          nbOctets=read(socketClients[i],buffer,sizeof(int));
+          if(nbOctets==sizeof(int))
           {
-            printf("socket1:%d\n", socketClients[o]);
-          }
-          printf("tmp:%d\n", tmp);
-          getchar();
-          for(int j=0; j<nbClients; j++)
-          {
-            if(infoClients[j].id==tmp)
+            memcpy(&tmp, buffer, sizeof(int));
+            if(tmp==0)
             {
-              //TODO URGENT!!! DECALER LE TABLEAU SOCKET
-              for(int k=i;k<nbClients-2; k++)
+              //TODO Lancer jeu
+            }
+            else
+            {
+              close(socketClients[i]);
+              for(int j=i;j<nbClients-2; j++)
               {
-                socketClients[k]=socketClients[k+1];
+                socketClients[j]=socketClients[j+1];
               }
-
               removeClient(infoClients, nbClients, tmp);
               nbClients--;
+              afficherClients(infoClients, nbClients, id);
             }
           }
-          printf("%d removed.",tmp);
-          getchar();
-          afficherClients(infoClients, nbClients, id);
         }
       }
     }
@@ -194,20 +186,20 @@ void gestionArret()
 {
   printf(COLOR_RED "Arrêt du jeu...\n" COLOR_RESET);
   close(socketEcoute);
-  if(sendto(socketMulticast,&id,sizeof(int),0,(struct sockaddr*) &adrMulticast,sizeof(sockaddr_in))==sizeof(int))
+  if(sendto(socketMulticast,&id,sizeof(int),0,(struct sockaddr*) &adrMulticast,sizeof(sockaddr_in))!=sizeof(int))
   {
-    printf(BOLD "Terminé.\n" FONT_RESET);
+    perror("writeServerQuitNotif");
   }
 
   for(int i=0; i<nbClients-1; i++)
   {
-    printf("written");
     if(write(socketClients[i],&id,sizeof(int))==-1)
     {
-      perror("write");
+      perror("writeClientQuitNotif");
     }
     close(socketClients[i]);
   }
+  printf(BOLD "Terminé.\n" FONT_RESET);
   exit(EXIT_SUCCESS);
 }
 

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -14,7 +15,6 @@
 #include <errno.h>
 #include <signal.h>
 #include <time.h>
-
 
 #define L_PSEUDO_MAX    32
 #define MULTICAST_ADR   "224.0.0.0"
@@ -48,7 +48,6 @@ typedef struct
 
 int creerSocketTCP(int port);
 int calculerID(char* pseudo, int nbClients);
-void afficherClients(info_client infoClients[], int nbClients, int id);
 void removeClient(info_client infoClients[], int nbClients, int id);
 
 #endif

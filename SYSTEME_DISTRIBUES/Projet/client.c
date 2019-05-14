@@ -1,11 +1,18 @@
 #include "common.h"
 
-//TODO faire une structure id+socket et les fonctions qui vont avec pour savoir quelle socket supprimer.
-
+//TODO GERER BUG RECONNEXION
+//FAIRE LES AFFICHAGES
+//CODER LE JEU
+//CODER LE JAVA
 
 void helpMessage();
 void versionMessage();
+void afficherClients();
 void gestionArret();
+void* threadLecture(void* arg);
+int isID(int id);
+int saisieScoreMax();
+void determinerOrdre(int ordreSocket[]);
 
 int socketMulticast;
 int socketEcoute;
@@ -14,6 +21,7 @@ int id;
 int nbClients;
 info_client infoClients[NB_CLIENT_MAX];
 int socketClients[NB_CLIENT_MAX-1];
+int hostID;
 
 int main(int argc, char** argv)
 {
@@ -25,6 +33,12 @@ int main(int argc, char** argv)
   char buffer[2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client)];
   int nbOctets;
   int tmp;
+  pthread_t threadLectureAdr;
+  int threadCree=-1;
+  char saisieUsr=0;
+  int partieLancee=0;
+  int scoreMax=0;
+  int ordreSocket[NB_CLIENT_MAX-1];
 
   //Création socket écoute
   socketEcoute = creerSocketTCP(0);
@@ -70,7 +84,6 @@ int main(int argc, char** argv)
     perror("readServer");
   }
 
-  //TODO le serveur nous signalera le début de partie, donc il faut pas close mtn
   close(socketServiceServeur);
 
   if(nbOctets==2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client))
@@ -82,8 +95,8 @@ int main(int argc, char** argv)
     {
       memcpy(&infoClients[i], buffer+2*sizeof(int)+i*sizeof(info_client),sizeof(info_client));
     }
-    afficherClients(infoClients, nbClients, id);
 
+    signal(SIGINT, gestionArret);
     int j=0;
     for(int i=0; i<nbClients; i++)
     {
@@ -94,17 +107,39 @@ int main(int argc, char** argv)
         {
           perror("connectClient");
         }
+        nbOctets=read(socketClients[j],&tmp,sizeof(int));
+        if(nbOctets==sizeof(int))
+        {
+          switch(tmp)
+          {
+            case 0:
+              break;
+            case -1:
+              printf("Une partie est déjà en cours, vous ne pouvez rejoindre pour le moment.\n");
+              exit(EXIT_SUCCESS);
+            default:
+              printf("ERREUR REPONSE INATTENDUE\n");
+              exit(EXIT_FAILURE);
+
+          }
+        }
+
+        afficherClients();
+        fcntl(socketClients[j], F_SETFL, O_NONBLOCK);
 
         if(write(socketClients[j],&infoClient,sizeof(info_client))==-1)
         {
           perror("writeClient");
         }
-        fcntl(socketClients[j], F_SETFL, O_NONBLOCK);
+
         j++;
       }
     }
+    if(nbClients>1)
+    {
+      printf("Appuyez sur entrée pour commencer la partie.\n");
+    }
 
-    signal(SIGINT, gestionArret);
     fcntl(socketEcoute, F_SETFL, O_NONBLOCK);
     while(1)
     {
@@ -114,11 +149,14 @@ int main(int argc, char** argv)
         tmp=accept(socketEcoute,(sockaddr*)&infoClients[nbClients-1].adr,&(socklen_t){sizeof(sockaddr)});
       }
 
-      if(tmp!=-1)
+      if(tmp!=-1 && !partieLancee)
       {
         socketClients[nbClients-1]=tmp;
         fcntl(socketClients[nbClients-1], F_SETFL, O_NONBLOCK);
-
+        if(write(tmp,&(int){0},sizeof(int))==-1)
+        {
+          perror("writeOKClient");
+        }
         bzero(buffer,sizeof(info_client));
         do
         {
@@ -129,22 +167,65 @@ int main(int argc, char** argv)
           memcpy(&infoClients[nbClients], buffer, sizeof(info_client));
           nbClients++;
         }
-        afficherClients(infoClients, nbClients, id);
+        afficherClients();
+        if(nbClients>1)
+        {
+          printf("Appuyez sur entrée pour commencer la partie.\n");
+        }
+      }
+      else if(tmp!=-1 && partieLancee)
+      {
+        if(write(tmp,&(int){-1},sizeof(int))==-1)
+        {
+          perror("writeCancelClient");
+        }
       }
       else
       {
+        if(nbClients>1)
+        {
+          if(threadCree==-1)
+          {
+            threadCree=pthread_create(&threadLectureAdr, NULL, (void*)threadLecture, (void*)&saisieUsr);
+          }
+          if(saisieUsr=='y')
+          {
+            saisieUsr=0;
+            partieLancee=1;
+            bzero(buffer, sizeof(int));
+            for(int i=0; i<nbClients-1; i++)
+            {
+              if(write(socketClients[i],&(int){1},sizeof(int))==-1)
+              {
+                perror("writeClientStartGame");
+              }
+            }
+            scoreMax=saisieScoreMax();
+
+            bzero(buffer, 2*sizeof(int));
+            memcpy(buffer, &id, sizeof(int));
+            memcpy(buffer+sizeof(int), &scoreMax, sizeof(int));
+            for(int i=0; i<nbClients-1; i++)
+            {
+              if(write(socketClients[i],buffer,2*sizeof(int))==-1)
+              {
+                perror("writeGameInfos");
+              }
+            }
+
+            determinerOrdre(ordreSocket);
+          }
+        }
+
         for(int i=0; i<nbClients-1; i++)
         {
-          bzero(buffer, sizeof(int));
-          nbOctets=read(socketClients[i],buffer,sizeof(int));
+          bzero(buffer, 2*sizeof(int));
+          tmp=-1;
+          nbOctets=read(socketClients[i],buffer,2*sizeof(int));
           if(nbOctets==sizeof(int))
           {
             memcpy(&tmp, buffer, sizeof(int));
-            if(tmp==0)
-            {
-              //TODO Lancer jeu
-            }
-            else
+            if(isID(tmp))
             {
               close(socketClients[i]);
               for(int j=i;j<nbClients-2; j++)
@@ -153,8 +234,26 @@ int main(int argc, char** argv)
               }
               removeClient(infoClients, nbClients, tmp);
               nbClients--;
-              afficherClients(infoClients, nbClients, id);
+              partieLancee=0;
+              afficherClients();
             }
+            else if(tmp==1)
+            {
+              partieLancee=1;
+              pthread_cancel(threadLectureAdr);
+            }
+          }
+          else if(nbOctets==2*sizeof(int))
+          {
+            memcpy(&hostID, buffer, sizeof(int));
+            memcpy(&scoreMax, buffer+sizeof(int), sizeof(int));
+            printf("%d %d",hostID, scoreMax);
+            getchar();
+          }
+          else if(nbOctets!=-1)
+          {
+            printf("ERREUR REPONSE INATTENDUEDANSFOR\n");
+            exit(EXIT_FAILURE);
           }
         }
       }
@@ -182,6 +281,111 @@ int main(int argc, char** argv)
   return 0;
 }
 
+void afficherPartie()
+{
+  //TODO
+  system("clear");
+  printf(BOLD "NOMBRE DE JOUEURS:" FONT_RESET COLOR_RED " %d\n\n" COLOR_RESET BOLD "LISTE JOUEURS\n" FONT_RESET, nbClients);
+  for(int i=0; i<nbClients; i++)
+  {
+    printf(UNDERLINE "%d:" FONT_RESET "%s#%04d",i+1,infoClients[i].pseudo,infoClients[i].id);
+    if(id!=infoClients[i].id)
+    {
+      printf("\n");
+    }
+    else
+    {
+      printf(COLOR_GREEN " (Vous)\n" COLOR_RESET);
+    }
+  }
+  printf("\n");
+}
+
+void afficherResultats()
+{
+  //TODO
+}
+
+void afficherClients()
+{
+  system("clear");
+  printf(BOLD "NOMBRE DE JOUEURS:" FONT_RESET COLOR_RED " %d\n\n" COLOR_RESET BOLD "LISTE JOUEURS\n" FONT_RESET, nbClients);
+  for(int i=0; i<nbClients; i++)
+  {
+    printf(UNDERLINE "%d:" FONT_RESET "%s#%04d",i+1,infoClients[i].pseudo,infoClients[i].id);
+    if(id!=infoClients[i].id)
+    {
+      printf("\n");
+    }
+    else
+    {
+      printf(COLOR_GREEN " (Vous)\n" COLOR_RESET);
+    }
+  }
+  printf("\n");
+}
+
+void determinerOrdre(int ordreSocket[])
+{
+  int idRandomized[NB_CLIENT_MAX-1];
+  int tmp;
+
+  srand(time(NULL));
+
+  //Pour chaque id on lui soustrait un nombre aléatoire entre 0 et lui même inclus
+  //On remplit également le tableau de sockets
+  for(int i=1; i<nbClients; i++)
+  {
+    idRandomized[i-1] = infoClients[i].id - rand()%(infoClients[i].id+1);
+    ordreSocket[i-1] = socketClients[i-1];
+  }
+
+  //Tri bulle croissant du premier tableau et rangement du second dans le même ordre
+  for (int i=0; i<nbClients-1; i++)
+  {
+     for(int j=i; j<nbClients-1; j++)
+     {
+       if(idRandomized[j]>idRandomized[i])
+       {
+         tmp=idRandomized[i];
+         idRandomized[i] = idRandomized[j];
+         idRandomized[j] = tmp;
+
+         tmp=ordreSocket[i];
+         ordreSocket[i] = ordreSocket[j];
+         ordreSocket[j] = tmp;
+       }
+     }
+   }
+
+   for (int i=0; i<nbClients-1; i++)
+   {
+     printf("%d ", ordreSocket[i]);
+   }
+   getchar();
+}
+
+int isID(int id)
+{
+  for(int i=0; i<nbClients; i++)
+  {
+    if(infoClients[i].id==id)
+    {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+void* threadLecture(void* arg)
+{
+  while(getchar()!=0x0A);
+
+  memcpy(arg, &(char){'y'}, sizeof(char));
+
+  pthread_exit(NULL);
+}
+
 void gestionArret()
 {
   printf(COLOR_RED "Arrêt du jeu...\n" COLOR_RESET);
@@ -201,6 +405,60 @@ void gestionArret()
   }
   printf(BOLD "Terminé.\n" FONT_RESET);
   exit(EXIT_SUCCESS);
+}
+
+int saisieScoreMax()
+{
+  char buffer;
+  char saisie[3];
+  char* endptr=NULL;
+  long value;
+  int saisieCorrecte=0;
+
+  printf("Entrez le nombre de points à atteindre (min: 1; max: 343).\n");
+
+  do
+  {
+    do
+    {
+      saisieCorrecte=0;
+      bzero(saisie, 4*sizeof(char));
+      for(int i=0; i<4; i++)
+      {
+        buffer = fgetc(stdin);
+        if(buffer=='\n')
+        {
+          break;
+        }
+        saisie[i]=buffer;
+      }
+      if(buffer!='\n')
+      {
+        do
+        {
+          buffer=fgetc(stdin);
+        } while(buffer!='\n');
+        printf("Vous avez saisie un nombre trop important de caractères.\n");
+      }
+      else
+      {
+        saisieCorrecte=1;
+      }
+    } while(!saisieCorrecte);
+
+
+    value=strtol(saisie, &endptr, 10);
+    if(endptr!=saisie+strlen(saisie))
+    {
+      printf("%s n'est pas un nombre.\n",saisie);
+    }
+    if(!(endptr!=saisie+strlen(saisie)) && (value<=0||value>343))
+    {
+      printf("%ld n'est pas dans l'intervalle indiqué.\n",value);
+    }
+  } while(endptr!=saisie+strlen(saisie)||value<=0||value>343);
+
+  return (int)value;
 }
 
 void helpMessage()

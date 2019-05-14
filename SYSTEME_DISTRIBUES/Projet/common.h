@@ -17,7 +17,7 @@
 #include <time.h>
 
 #define L_PSEUDO_MAX    32
-#define MULTICAST_ADR   "224.0.0.0"
+#define MULTICAST_ADR   "224.0.0.1"
 #define MULTICAST_PORT  10001
 #define NB_CLIENT_MAX   4
 

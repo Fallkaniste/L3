@@ -1,29 +1,33 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <pthread.h>
+    #define _GNU_SOURCE /* To get defns of NI_MAXSERV and NI_MAXHOST */
+    #include <arpa/inet.h>
+    #include <sys/socket.h>
+    #include <netdb.h>
+    #include <ifaddrs.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <unistd.h>
+    #include <linux/if_link.h>
 
-void *thread_1(void *arg)
-{
-    printf("Nous sommes dans le thread.\n");
+    char* getIP()
+    {
+      struct ifaddrs *addrs, *tmp;
+      getifaddrs(&addrs);
+      tmp=addrs;
+      struct sockaddr_in *pAddr;
 
-    /* Pour enlever le warning */
-    (void) arg;
-    pthread_exit(NULL);
-}
-
-int main(void)
-{
-    pthread_t thread1;
-
-    printf("Avant la création du thread.\n");
-
-    if(pthread_create(&thread1, NULL, thread_1, NULL) == -1) {
-	perror("pthread_create");
-	return EXIT_FAILURE;
+      while(tmp)
+      {
+        if(tmp->ifa_addr && tmp->ifa_addr->sa_family== AF_INET)
+        {
+          pAddr=(struct sockaddr_in *)tmp->ifa_addr;
+        }
+        tmp=tmp->ifa_next;
+      }
     }
 
-    printf("Après la création du thread.\n");
-
-    return EXIT_SUCCESS;
-}
+    int main(int argc, char *argv[])
+    {
+      char* IP;
+	    IP=getIP();
+      printf("\n\t IP : %s", IP);
+    }

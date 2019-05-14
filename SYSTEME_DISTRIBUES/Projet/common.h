@@ -34,6 +34,7 @@ typedef struct sockaddr_in sockaddr_in;
 typedef struct sockaddr sockaddr;
 typedef struct ip_mreq ip_mreq;
 typedef struct ifaddrs ifaddrs;
+typedef struct in_addr in_addr;
 
 /*static struct option options[] =
 {
@@ -51,6 +52,6 @@ typedef struct
 int creerSocketTCP(int port);
 int calculerID(char* pseudo, int nbClients);
 void removeClient(info_client infoClients[], int nbClients, int id);
-sockaddr_in getIP();
+in_addr getIP();
 
 #endif

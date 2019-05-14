@@ -71,7 +71,6 @@ int main()
         {
           memcpy(wBuffer+(2*sizeof(int))+(i*sizeof(info_client)),&infoClients[i],sizeof(info_client));
         }
-
         //Envoi au client
         socketService = creerSocketTCP(0);
         if(connect(socketService,(sockaddr*)&infoClients[nbClients-1].adr,sizeof(sockaddr_in)) == -1)

@@ -1,6 +1,27 @@
 #include "common.h"
 #include <math.h>
 
+sockaddr_in getIP()
+{
+  sockaddr_in adr;
+  ifaddrs* adrs;
+
+  getifaddrs(&adrs);
+
+  while(adrs)
+  {
+    if(adrs->ifa_addr && adrs->ifa_addr->sa_family== AF_INET)
+    {
+      adr=*((struct sockaddr_in *)adrs->ifa_addr);
+    }
+    adrs=adrs->ifa_next;
+  }
+
+  printf("IP:%s\n",inet_ntoa(adr.sin_addr));
+  //getchar();
+  return adr;
+}
+
 int creerSocketTCP(int port)
 {
   int sock;
@@ -16,7 +37,7 @@ int creerSocketTCP(int port)
   bzero((char *) &addr, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
-  addr.sin_addr.s_addr=htonl(INADDR_ANY);
+  addr.sin_addr=getIP().sin_addr;
   if(bind(sock, (struct sockaddr*)&addr, sizeof(addr))== -1)
   {
     perror("erreur bind socket");

@@ -10,19 +10,21 @@
 
     char* getIP()
     {
-      struct ifaddrs *addrs, *tmp;
-      getifaddrs(&addrs);
-      tmp=addrs;
       struct sockaddr_in *pAddr;
+      struct ifaddrs *addrs;
 
-      while(tmp)
+      getifaddrs(&addrs);
+
+      while(addrs)
       {
-        if(tmp->ifa_addr && tmp->ifa_addr->sa_family== AF_INET)
+        if(addrs->ifa_addr && addrs->ifa_addr->sa_family== AF_INET)
         {
-          pAddr=(struct sockaddr_in *)tmp->ifa_addr;
+          pAddr=(struct sockaddr_in *)addrs->ifa_addr;
         }
-        tmp=tmp->ifa_next;
+        addrs=addrs->ifa_next;
       }
+
+      return inet_ntoa(pAddr->sin_addr);
     }
 
     int main(int argc, char *argv[])

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <ifaddrs.h>
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -32,6 +33,7 @@
 typedef struct sockaddr_in sockaddr_in;
 typedef struct sockaddr sockaddr;
 typedef struct ip_mreq ip_mreq;
+typedef struct ifaddrs ifaddrs;
 
 /*static struct option options[] =
 {
@@ -49,5 +51,6 @@ typedef struct
 int creerSocketTCP(int port);
 int calculerID(char* pseudo, int nbClients);
 void removeClient(info_client infoClients[], int nbClients, int id);
+sockaddr_in getIP();
 
 #endif

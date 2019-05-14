@@ -98,7 +98,11 @@ int main(int argc, char** argv)
       memcpy(&infoClients[i], buffer+2*sizeof(int)+i*sizeof(info_client),sizeof(info_client));
     }
     afficherLobby();
+
     signal(SIGINT, gestionArret);
+    signal(SIGQUIT, gestionArret);
+    signal(SIGTERM, gestionArret);
+    signal(SIGHUP, gestionArret);
     int j=0;
     for(int i=0; i<nbClients; i++)
     {

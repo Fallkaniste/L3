@@ -7,7 +7,9 @@
 
 void helpMessage();
 void versionMessage();
-void afficherClients();
+void afficherLobby();
+void afficherPartie(int scoreMax, int scoreClients[]);
+void decoServeur();
 void gestionArret();
 void* threadLecture(void* arg);
 int isID(int id);
@@ -39,6 +41,7 @@ int main(int argc, char** argv)
   int partieLancee=0;
   int scoreMax=0;
   int ordreSocket[NB_CLIENT_MAX-1];
+  int scoreClients[NB_CLIENT_MAX]={0};
 
   //Création socket écoute
   socketEcoute = creerSocketTCP(0);
@@ -83,7 +86,6 @@ int main(int argc, char** argv)
   {
     perror("readServer");
   }
-
   close(socketServiceServeur);
 
   if(nbOctets==2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client))
@@ -95,7 +97,7 @@ int main(int argc, char** argv)
     {
       memcpy(&infoClients[i], buffer+2*sizeof(int)+i*sizeof(info_client),sizeof(info_client));
     }
-
+    afficherLobby();
     signal(SIGINT, gestionArret);
     int j=0;
     for(int i=0; i<nbClients; i++)
@@ -115,7 +117,9 @@ int main(int argc, char** argv)
             case 0:
               break;
             case -1:
-              printf("Une partie est déjà en cours, vous ne pouvez rejoindre pour le moment.\n");
+              system("clear");
+              printf(COLOR_RED "Connection refusée :" RESET " Une partie est déjà en cours, vous ne pouvez rejoindre pour le moment.\n");
+              decoServeur();
               exit(EXIT_SUCCESS);
             default:
               printf("ERREUR REPONSE INATTENDUE\n");
@@ -124,7 +128,7 @@ int main(int argc, char** argv)
           }
         }
 
-        afficherClients();
+        afficherLobby();
         fcntl(socketClients[j], F_SETFL, O_NONBLOCK);
 
         if(write(socketClients[j],&infoClient,sizeof(info_client))==-1)
@@ -134,10 +138,6 @@ int main(int argc, char** argv)
 
         j++;
       }
-    }
-    if(nbClients>1)
-    {
-      printf("Appuyez sur entrée pour commencer la partie.\n");
     }
 
     fcntl(socketEcoute, F_SETFL, O_NONBLOCK);
@@ -167,11 +167,7 @@ int main(int argc, char** argv)
           memcpy(&infoClients[nbClients], buffer, sizeof(info_client));
           nbClients++;
         }
-        afficherClients();
-        if(nbClients>1)
-        {
-          printf("Appuyez sur entrée pour commencer la partie.\n");
-        }
+        afficherLobby();
       }
       else if(tmp!=-1 && partieLancee)
       {
@@ -186,6 +182,7 @@ int main(int argc, char** argv)
         {
           if(threadCree==-1)
           {
+            afficherLobby();
             threadCree=pthread_create(&threadLectureAdr, NULL, (void*)threadLecture, (void*)&saisieUsr);
           }
           if(saisieUsr=='y')
@@ -214,6 +211,7 @@ int main(int argc, char** argv)
             }
 
             determinerOrdre(ordreSocket);
+            afficherPartie(scoreMax, scoreClients);
           }
         }
 
@@ -234,21 +232,33 @@ int main(int argc, char** argv)
               }
               removeClient(infoClients, nbClients, tmp);
               nbClients--;
-              partieLancee=0;
-              afficherClients();
+              if(partieLancee)
+              {
+                partieLancee=0;
+                threadCree=-1;
+                system("clear");
+                printf(COLOR_RED "Partie annulée :" RESET " Joueur(s) déconnecté.\n");
+                sleep(2);
+              }
+              afficherLobby();
             }
             else if(tmp==1)
             {
               partieLancee=1;
               pthread_cancel(threadLectureAdr);
+              printf("La partie a été lancé par un autre utilisateur." COLOR_YELLOW " Veuillez patienter...\n" RESET);
+              sleep(2);
             }
           }
           else if(nbOctets==2*sizeof(int))
           {
-            memcpy(&hostID, buffer, sizeof(int));
-            memcpy(&scoreMax, buffer+sizeof(int), sizeof(int));
-            printf("%d %d",hostID, scoreMax);
-            getchar();
+            if(partieLancee)
+            {
+              memcpy(&hostID, buffer, sizeof(int));
+              memcpy(&scoreMax, buffer+sizeof(int), sizeof(int));
+              afficherPartie(scoreMax, scoreClients);
+            }
+
           }
           else if(nbOctets!=-1)
           {
@@ -265,7 +275,7 @@ int main(int argc, char** argv)
     switch(id)
     {
       case -1:
-        printf(COLOR_RED "Connection refusée :" COLOR_RESET " Aucune place disponible.\n");
+        printf(COLOR_RED "Connection refusée :" RESET " Aucune place disponible.\n");
         break;
       default:
         printf("ERREUR REPONSE INATTENDUE\n");
@@ -281,22 +291,18 @@ int main(int argc, char** argv)
   return 0;
 }
 
-void afficherPartie()
+void afficherPartie(int scoreMax, int scoreClients[])
 {
-  //TODO
   system("clear");
-  printf(BOLD "NOMBRE DE JOUEURS:" FONT_RESET COLOR_RED " %d\n\n" COLOR_RESET BOLD "LISTE JOUEURS\n" FONT_RESET, nbClients);
+  printf(BOLD UNDERLINE "PARTIE EN COURS\n\n" RESET BOLD "SCORE À ATTEINDRE:" RESET COLOR_RED " %d\n\n" RESET BOLD "SCORE JOUEURS\n" RESET, scoreMax);
   for(int i=0; i<nbClients; i++)
   {
-    printf(UNDERLINE "%d:" FONT_RESET "%s#%04d",i+1,infoClients[i].pseudo,infoClients[i].id);
-    if(id!=infoClients[i].id)
+    printf(UNDERLINE "%s#%04d" RESET,infoClients[i].pseudo,infoClients[i].id);
+    if(id==infoClients[i].id)
     {
-      printf("\n");
+      printf(COLOR_GREEN " (Vous)" RESET);
     }
-    else
-    {
-      printf(COLOR_GREEN " (Vous)\n" COLOR_RESET);
-    }
+    printf(" : " COLOR_RED "%d\n" RESET, scoreClients[i]);
   }
   printf("\n");
 }
@@ -306,21 +312,25 @@ void afficherResultats()
   //TODO
 }
 
-void afficherClients()
+void afficherLobby()
 {
   system("clear");
-  printf(BOLD "NOMBRE DE JOUEURS:" FONT_RESET COLOR_RED " %d\n\n" COLOR_RESET BOLD "LISTE JOUEURS\n" FONT_RESET, nbClients);
+  printf(BOLD UNDERLINE "EN ATTENTE DE PARTIE\n\n" RESET BOLD "NOMBRE DE JOUEURS:" RESET COLOR_RED " %d\n\n" RESET BOLD "LISTE JOUEURS\n" RESET, nbClients);
   for(int i=0; i<nbClients; i++)
   {
-    printf(UNDERLINE "%d:" FONT_RESET "%s#%04d",i+1,infoClients[i].pseudo,infoClients[i].id);
+    printf(UNDERLINE "%d:" RESET "%s#%04d",i+1,infoClients[i].pseudo,infoClients[i].id);
     if(id!=infoClients[i].id)
     {
       printf("\n");
     }
     else
     {
-      printf(COLOR_GREEN " (Vous)\n" COLOR_RESET);
+      printf(COLOR_GREEN " (Vous)\n" RESET);
     }
+  }
+  if(nbClients>1)
+  {
+    printf("\nAppuyez sur entrée pour commencer la partie.\n");
   }
   printf("\n");
 }
@@ -362,7 +372,6 @@ void determinerOrdre(int ordreSocket[])
    {
      printf("%d ", ordreSocket[i]);
    }
-   getchar();
 }
 
 int isID(int id)
@@ -386,14 +395,19 @@ void* threadLecture(void* arg)
   pthread_exit(NULL);
 }
 
-void gestionArret()
+void decoServeur()
 {
-  printf(COLOR_RED "Arrêt du jeu...\n" COLOR_RESET);
   close(socketEcoute);
   if(sendto(socketMulticast,&id,sizeof(int),0,(struct sockaddr*) &adrMulticast,sizeof(sockaddr_in))!=sizeof(int))
   {
     perror("writeServerQuitNotif");
   }
+}
+
+void gestionArret()
+{
+  printf(COLOR_RED "Arrêt du jeu...\n" RESET);
+  decoServeur();
 
   for(int i=0; i<nbClients-1; i++)
   {
@@ -403,7 +417,7 @@ void gestionArret()
     }
     close(socketClients[i]);
   }
-  printf(BOLD "Terminé.\n" FONT_RESET);
+  printf(BOLD "Terminé.\n" RESET);
   exit(EXIT_SUCCESS);
 }
 

@@ -24,10 +24,10 @@
 //CANSI (terminal)
 #define BOLD          "\033[1m"
 #define UNDERLINE     "\033[4m"
-#define FONT_RESET    "\033[0m"
-#define COLOR_GREEN   "\x1b[32m"
-#define COLOR_RED     "\x1b[31m"
-#define COLOR_RESET   "\x1b[0m"
+#define COLOR_GREEN   "\033[32m"
+#define COLOR_YELLOW   "\033[33m"
+#define COLOR_RED     "\033[31m"
+#define RESET       "\033[0m"
 
 typedef struct sockaddr_in sockaddr_in;
 typedef struct sockaddr sockaddr;

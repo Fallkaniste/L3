@@ -3,6 +3,7 @@
 *.out
 
 *.tar.xz
+*.tar.gz
 
 *.png
 

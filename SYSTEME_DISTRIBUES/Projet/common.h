@@ -55,7 +55,8 @@ typedef enum type_message
   UNLOG,
   ANSWER,
   YETANSWERED,
-  SCORE
+  SCORE,
+  TOURSUIVANT
 } type_message;
 
 typedef struct

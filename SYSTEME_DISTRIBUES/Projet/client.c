@@ -25,6 +25,9 @@ int id;
 int nbClients;
 info_client infoClients[NB_CLIENT_MAX];
 int socketClients[NB_CLIENT_MAX-1];
+int partieLancee=0;
+int scoreMax=0;
+  int threadLectureHostCree=-1;
 
 int main(int argc, char** argv)
 {
@@ -38,10 +41,9 @@ int main(int argc, char** argv)
   int nbOctets;
   int tmp;
   pthread_t threadLectureHostAdr;
-  int threadLectureHostCree=-1;
+
   char saisieUsr=0;
-  int partieLancee=0;
-  int scoreMax=0;
+
   int ordreSocket[NB_CLIENT_MAX-1];
   int scoreClients[NB_CLIENT_MAX]={0};
   int hostID;
@@ -54,6 +56,7 @@ int main(int argc, char** argv)
   combinaison c=AUCUNE;
   pthread_t threadLectureJeuAdr;
   int scoreDes;
+  int compteurTour=0;
 
   //Création socket écoute
   socketEcoute = creerSocketTCP(0);
@@ -272,7 +275,19 @@ int main(int argc, char** argv)
           afficherDes(ch1, ch2, cul, infoClient.pseudo, id, id);
           c=trouverCombinaison(ch1,ch2,cul);
           traiterCombinaison(c, &threadLectureJeuAdr, &saisieUsr, scoreDes, scoreClients, idJoueur);
-
+          if(id==hostID)
+          {
+            if(compteurTour==nbClients-1)
+            {
+              compteurTour=0;
+            }
+            msg.type=TOURSUIVANT;
+            if(write(ordreSocket[compteurTour],&msg,sizeof(message))==-1)
+            {
+              perror("erreurtoursuivant");
+            }
+            compteurTour++;
+          }
         }
 
         //Gestion intéractions
@@ -347,13 +362,38 @@ int main(int argc, char** argv)
             memcpy(&cul, msg.contenu+3*sizeof(int), sizeof(int));
             afficherDes(ch1, ch2, cul, infoClient.pseudo, idJoueur, id);
             c=trouverCombinaison(ch1, ch2, cul);
+            traiterCombinaison(c, &threadLectureJeuAdr, &saisieUsr, scoreDes, scoreClients, idJoueur);
+
             if(id==hostID)
             {
               scoreDes=calculPoints(ch1, ch2, cul, c);
+              if(compteurTour==nbClients-1)
+              {
+                compteurTour=0;
+              }
+              msg.type=TOURSUIVANT;
+              if(write(ordreSocket[compteurTour],&msg,sizeof(message))==-1)
+              {
+                perror("erreurtoursuivant");
+              }
+              compteurTour++;
             }
-            traiterCombinaison(c, &threadLectureJeuAdr, &saisieUsr, scoreDes, scoreClients, idJoueur);
           }
-          else if (hostID==id && (saisieUsr=='0' || saisieUsr=='1' || msg.type==ANSWER))
+          else if(msg.type==SCORE)
+          {
+
+            for(int i=0; i<nbClients; i++)
+            {
+              memcpy(&scoreClients[i], msg.contenu+i*sizeof(int), sizeof(int));
+              if(scoreClients[i]>scoreMax)
+              {
+                partieLancee=0;
+                threadLectureHostCree=-1;
+              }
+              printf("Score de %s#%d:%d\n", infoClients[i].pseudo, infoClients[i].id, scoreClients[i]);
+            }
+          }
+          /*else if (hostID==id && (saisieUsr=='0' || saisieUsr=='1' || msg.type==ANSWER))
           {
             if(nbOctets!=-1)
             {
@@ -420,7 +460,7 @@ int main(int argc, char** argv)
             else if(saisieUsr=='1' && c==CHOUETTEVELUTE)
             {
               /*reponseChouetteVelute[nbRepondus-1]=id;
-              nbRepondus++;*/
+              nbRepondus++;
             }
             else
             {
@@ -440,6 +480,10 @@ int main(int argc, char** argv)
                 break;
               }
             }
+          }*/
+          else if(msg.type==TOURSUIVANT)
+          {
+            tourDeJouer=1;
           }
 
         }
@@ -472,7 +516,7 @@ void traiterCombinaison(combinaison c, pthread_t* threadAdr, char* saisieUsr, in
 {
   message msg;
 
-  if(c==SUITE || c==CHOUETTEVELUTE)
+  /*if(c==SUITE || c==CHOUETTEVELUTE)
   {
     afficherReponses();
     if(pthread_create(threadAdr, NULL, (void*)threadLectureJeu, (void*)saisieUsr)==-1)
@@ -481,28 +525,31 @@ void traiterCombinaison(combinaison c, pthread_t* threadAdr, char* saisieUsr, in
     }
   }
   else
-  {
+  {*/
     bzero(msg.contenu, sizeof(T_CONTENU_MESSAGE));
     for(int i=0; i<nbClients; i++)
     {
       if(infoClients[i].id==idJoueur)
       {
         scoreClients[i]+=scoreDes;
+        if(scoreClients[i]>scoreMax)
+        {
+          partieLancee=0;
+          threadLectureHostCree=-1;
+        }
       }
       memcpy(msg.contenu+i*sizeof(int), &scoreClients[i], sizeof(int));
     }
     msg.type=SCORE;
-    for(int i=1; i<nbClients; i++)
+    for(int i=0; i<nbClients-1; i++)
     {
-      if(idJoueur==id)
-      {
-        if(write(socketClients[i-1],&msg,sizeof(message) )==-1)
+
+        if(write(socketClients[i],&msg,sizeof(message) )==-1)
         {
           perror("writeScore");
         }
-      }
     }
-  }
+  //}
 }
 
 void afficherPartie(int scoreMax, int scoreClients[])

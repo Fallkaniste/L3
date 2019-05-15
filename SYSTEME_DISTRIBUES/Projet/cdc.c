@@ -35,12 +35,12 @@ combinaison trouverCombinaison(int ch1, int ch2, int cul)
   int score=0;
 
   printf(BOLD "COMBINAISON: " RESET);
-  if (verifierSuite(ch1, ch2, cul))
+  /*if (verifierSuite(ch1, ch2, cul))
   {
     printf(COLOR_RED "Suite!\n\n" RESET);
     return SUITE;
   }
-  else if((ch1+ch2)==cul)
+  else */if((ch1+ch2)==cul)
   {
     printf(COLOR_GREEN "Velute!\n\n" RESET);
     return VELUTE;
@@ -55,11 +55,11 @@ combinaison trouverCombinaison(int ch1, int ch2, int cul)
     printf(COLOR_YELLOW "Cul de chouette!\n\n" RESET);
     return CDC;
   }
-  else if(ch1==ch2 && (ch1+ch2)==cul)
+  /*else if(ch1==ch2 && (ch1+ch2)==cul)
   {
     printf(COLOR_GREEN "Chouette velute!\n\n" RESET);
     return CHOUETTEVELUTE;
-  }
+  }*/
   else
   {
     printf(COLOR_BLUE "Aucune...\n\n" RESET);

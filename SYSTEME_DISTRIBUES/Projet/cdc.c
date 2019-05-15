@@ -2,8 +2,6 @@
 
 void lancerDe(int* ch1, int* ch2, int* cul)
 {
-  srand(time(NULL));
-
   *ch1=rand()%(6)+1;
   *ch2=rand()%(6)+1;
   *cul=rand()%(6)+1;
@@ -13,16 +11,16 @@ void afficherDes(int ch1, int ch2, int cul, char* pseudo, int idJoueur, int id)
 {
   if(idJoueur!=id)
   {
-    printf(BOLD "RESULTAT DU LANCÉ DE:" RESET COLOR_GREEN "%s#%d\n" RESET, pseudo, idJoueur);
+    printf(BOLD "RESULTAT DU LANCÉ DE: " RESET COLOR_GREEN "%s#%d\n" RESET, pseudo, idJoueur);
   }
   else
   {
     printf(BOLD "RESULTAT DE VOTRE LANCÉ:\n" RESET);
   }
 
-  printf(UNDERLINE "Chouette 1:" RESET COLOR_RED "%d\n" RESET, ch1);
-  printf(UNDERLINE "Chouette 2:" RESET COLOR_RED "%d\n" RESET , ch2);
-  printf(UNDERLINE "Cul de chouette:" RESET COLOR_RED "%d\n\n" RESET, cul);
+  printf(UNDERLINE "Chouette 1:" RESET COLOR_RED " %d\n" RESET, ch1);
+  printf(UNDERLINE "Chouette 2:" RESET COLOR_RED " %d\n" RESET , ch2);
+  printf(UNDERLINE "Cul de chouette:" RESET COLOR_RED " %d\n\n" RESET, cul);
 }
 
 void afficherReponses()

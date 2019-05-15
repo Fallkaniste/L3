@@ -58,6 +58,18 @@ int calculerID(char* pseudo, int nbClients)
   return id;
 }
 
+int indexOf(int id, info_client infoClients[], int nbClients)
+{
+  for(int i=0; i<nbClients; i++)
+  {
+    if(infoClients[i].id==id)
+    {
+      return i;
+    }
+  }
+  return -1;
+}
+
 void removeClient(info_client infoClients[], int nbClients, int id)
 {
   for(int i=0; i<nbClients; i++)

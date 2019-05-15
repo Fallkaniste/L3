@@ -76,6 +76,7 @@ typedef struct
 
 int creerSocketTCP(int port);
 int calculerID(char* pseudo, int nbClients);
+int indexOf(int id, info_client infoClients[], int nbClients);
 void removeClient(info_client infoClients[], int nbClients, int id);
 in_addr getIP();
 

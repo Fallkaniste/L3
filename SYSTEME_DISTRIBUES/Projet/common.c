@@ -1,5 +1,4 @@
 #include "common.h"
-#include <math.h>
 
 in_addr getIP()
 {

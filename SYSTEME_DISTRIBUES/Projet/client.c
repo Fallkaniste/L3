@@ -1,6 +1,7 @@
 #include "common.h"
+#include "cdc.h"
 
-//TODO GERER BUG RECONNEXION
+//TODO
 //FAIRE LES AFFICHAGES
 //CODER LE JEU
 //CODER LE JAVA
@@ -11,10 +12,11 @@ void afficherLobby();
 void afficherPartie(int scoreMax, int scoreClients[]);
 void decoServeur();
 void gestionArret();
-void* threadLecture(void* arg);
-int isID(int id);
+void* threadLectureHost(void* arg);
 int saisieScoreMax();
 void determinerOrdre(int ordreSocket[]);
+void* threadLectureJeu(void* arg);
+void traiterCombinaison(combinaison c, pthread_t* threadAdr, char* saisieUsr, int scoreDes, int* scoreClients, int idJoueur);
 
 int socketMulticast;
 int socketEcoute;
@@ -23,7 +25,6 @@ int id;
 int nbClients;
 info_client infoClients[NB_CLIENT_MAX];
 int socketClients[NB_CLIENT_MAX-1];
-int hostID;
 
 int main(int argc, char** argv)
 {
@@ -32,16 +33,27 @@ int main(int argc, char** argv)
   info_client infoClient;
   sockaddr_in adrServeur;
   int socketServiceServeur;
-  char buffer[2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client)];
+  char buffer[T_CONTENU_MESSAGE];
+  message msg;
   int nbOctets;
   int tmp;
-  pthread_t threadLectureAdr;
-  int threadCree=-1;
+  pthread_t threadLectureHostAdr;
+  int threadLectureHostCree=-1;
   char saisieUsr=0;
   int partieLancee=0;
   int scoreMax=0;
   int ordreSocket[NB_CLIENT_MAX-1];
   int scoreClients[NB_CLIENT_MAX]={0};
+  int hostID;
+  int hostSocket;
+  int tourDeJouer=0;
+  int ch1=0;
+  int ch2=0;
+  int cul=0;
+  int idJoueur=0;
+  combinaison c=AUCUNE;
+  pthread_t threadLectureJeuAdr;
+  int scoreDes;
 
   //Création socket écoute
   socketEcoute = creerSocketTCP(0);
@@ -80,15 +92,15 @@ int main(int argc, char** argv)
 
   socketServiceServeur = accept(socketEcoute,(sockaddr*)&adrServeur,&(socklen_t){sizeof(sockaddr)});
 
-  bzero(buffer,2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client));
-  nbOctets=read(socketServiceServeur,buffer,2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client));
+  bzero(buffer,T_CONTENU_MESSAGE);
+  nbOctets=read(socketServiceServeur,buffer,T_CONTENU_MESSAGE);
   if(nbOctets==-1)
   {
     perror("readServer");
   }
   close(socketServiceServeur);
 
-  if(nbOctets==2*sizeof(int)+NB_CLIENT_MAX*sizeof(info_client))
+  if(nbOctets==T_CONTENU_MESSAGE)
   {
     memcpy(&id,buffer,sizeof(int));
     infoClient.id=id;
@@ -97,7 +109,6 @@ int main(int argc, char** argv)
     {
       memcpy(&infoClients[i], buffer+2*sizeof(int)+i*sizeof(info_client),sizeof(info_client));
     }
-    afficherLobby();
 
     signal(SIGINT, gestionArret);
     signal(SIGQUIT, gestionArret);
@@ -113,28 +124,26 @@ int main(int argc, char** argv)
         {
           perror("connectClient");
         }
-        nbOctets=read(socketClients[j],&tmp,sizeof(int));
-        if(nbOctets==sizeof(int))
+        if(read(socketClients[j],&msg,sizeof(message))==-1)
         {
-          switch(tmp)
-          {
-            case 0:
-              break;
-            case -1:
-              system("clear");
-              printf(COLOR_RED "Connection refusée :" RESET " Une partie est déjà en cours, vous ne pouvez rejoindre pour le moment.\n");
-              decoServeur();
-              exit(EXIT_SUCCESS);
-            default:
-              printf("ERREUR REPONSE INATTENDUE\n");
-              exit(EXIT_FAILURE);
-
-          }
+          perror("readClient");
         }
 
-        afficherLobby();
-        fcntl(socketClients[j], F_SETFL, O_NONBLOCK);
+        switch(msg.type)
+        {
+          case ACK:
+            afficherLobby();
+            break;
+          case CANCEL:
+            printf(COLOR_RED "Connection refusée :" RESET " Une partie est déjà en cours, vous ne pouvez rejoindre pour le moment.\n");
+            decoServeur();
+            exit(EXIT_SUCCESS);
+          default:
+            printf("ERREUR REPONSE INATTENDUE BOUCLE CONNECT\n");
+            exit(EXIT_FAILURE);
+        }
 
+        fcntl(socketClients[j], F_SETFL, O_NONBLOCK);
         if(write(socketClients[j],&infoClient,sizeof(info_client))==-1)
         {
           perror("writeClient");
@@ -147,17 +156,20 @@ int main(int argc, char** argv)
     fcntl(socketEcoute, F_SETFL, O_NONBLOCK);
     while(1)
     {
+      //Acceptation nouvelles connexions
       tmp=-1;
       if(nbClients<4)
       {
         tmp=accept(socketEcoute,(sockaddr*)&infoClients[nbClients-1].adr,&(socklen_t){sizeof(sockaddr)});
       }
 
+      //Si on a une connexion et que l'on n'est pas en partie
       if(tmp!=-1 && !partieLancee)
       {
         socketClients[nbClients-1]=tmp;
         fcntl(socketClients[nbClients-1], F_SETFL, O_NONBLOCK);
-        if(write(tmp,&(int){0},sizeof(int))==-1)
+        msg.type=ACK;
+        if(write(tmp,&msg,sizeof(message))==-1)
         {
           perror("writeOKClient");
         }
@@ -173,102 +185,263 @@ int main(int argc, char** argv)
         }
         afficherLobby();
       }
+      //Si on a une connexion et que l'on est déjà en partie
       else if(tmp!=-1 && partieLancee)
       {
-        if(write(tmp,&(int){-1},sizeof(int))==-1)
+        msg.type=CANCEL;
+        if(write(tmp,&msg,sizeof(message))==-1)
         {
           perror("writeCancelClient");
         }
       }
+
+      //Si on a pas reçu de demande de connexion
       else
       {
+        //Demande de début de partie
         if(nbClients>1)
         {
-          if(threadCree==-1)
+          if(threadLectureHostCree==-1)
           {
             afficherLobby();
-            threadCree=pthread_create(&threadLectureAdr, NULL, (void*)threadLecture, (void*)&saisieUsr);
-          }
-          if(saisieUsr=='y')
-          {
-            saisieUsr=0;
-            partieLancee=1;
-            bzero(buffer, sizeof(int));
-            for(int i=0; i<nbClients-1; i++)
+            threadLectureHostCree=pthread_create(&threadLectureHostAdr, NULL, (void*)threadLectureHost, (void*)&saisieUsr);
+            if(threadLectureHostCree==-1)
             {
-              if(write(socketClients[i],&(int){1},sizeof(int))==-1)
-              {
-                perror("writeClientStartGame");
-              }
+              perror("errorHostThread");
             }
-            scoreMax=saisieScoreMax();
-
-            bzero(buffer, 2*sizeof(int));
-            memcpy(buffer, &id, sizeof(int));
-            memcpy(buffer+sizeof(int), &scoreMax, sizeof(int));
-            for(int i=0; i<nbClients-1; i++)
-            {
-              if(write(socketClients[i],buffer,2*sizeof(int))==-1)
-              {
-                perror("writeGameInfos");
-              }
-            }
-
-            determinerOrdre(ordreSocket);
-            afficherPartie(scoreMax, scoreClients);
           }
         }
 
+        //Gestion lecture debut partie
+        if(saisieUsr=='y')
+        {
+          saisieUsr=0;
+          partieLancee=1;
+          msg.type=STARTGAME;
+          for(int i=0; i<nbClients-1; i++)
+          {
+            if(write(socketClients[i],&msg,sizeof(message))==-1)
+            {
+              perror("writeClientStartGame");
+            }
+          }
+
+          scoreMax=saisieScoreMax();
+
+          hostID=id;
+          bzero(msg.contenu, 2*sizeof(int));
+          memcpy(msg.contenu, &hostID, sizeof(int));
+          memcpy(msg.contenu+sizeof(int), &scoreMax, sizeof(int));
+          msg.type=INFOHOST;
+
+          for(int i=0; i<nbClients-1; i++)
+          {
+            if(write(socketClients[i],&msg,sizeof(msg))==-1)
+            {
+              perror("writeGameInfos");
+            }
+          }
+
+          determinerOrdre(ordreSocket);
+          afficherPartie(scoreMax, scoreClients);
+          tourDeJouer=1;
+        }
+
+        //Gestion tour de jeu
+        if(tourDeJouer==1)
+        {
+
+          tourDeJouer=0;
+
+          lancerDe(&ch1, &ch2, &cul);
+          bzero(msg.contenu, 4*sizeof(int));
+          memcpy(msg.contenu, &id, sizeof(int));
+          memcpy(msg.contenu+sizeof(int), &ch1, sizeof(int));
+          memcpy(msg.contenu+2*sizeof(int), &ch2, sizeof(int));
+          memcpy(msg.contenu+3*sizeof(int), &cul, sizeof(int));
+          msg.type=DES;
+
+          for(int i=0; i<nbClients-1; i++)
+          {
+            if(write(socketClients[i], &msg, sizeof(message))!=sizeof(message))
+            {
+              perror("writeDe");
+            }
+          }
+
+          afficherDes(ch1, ch2, cul, infoClient.pseudo, id, id);
+          c=trouverCombinaison(ch1,ch2,cul);
+          traiterCombinaison(c, &threadLectureJeuAdr, &saisieUsr, scoreDes, scoreClients, idJoueur);
+
+        }
+
+        //Gestion intéractions
+        if(hostID!=id && (saisieUsr=='0' || saisieUsr=='1'))
+        {
+          bzero(msg.contenu, sizeof(int)+sizeof(char));
+          memcpy(msg.contenu, &id, sizeof(int));
+          memcpy(msg.contenu+sizeof(int), &saisieUsr, sizeof(char));
+          msg.type=ANSWER;
+
+          if(write(hostSocket, &msg, sizeof(message))==-1)
+          {
+            perror("errorAnswerWrite");
+          }
+
+          saisieUsr=0;
+        }
+
+        //Lecture et traitement sur toute les sockets
         for(int i=0; i<nbClients-1; i++)
         {
-          bzero(buffer, 2*sizeof(int));
-          tmp=-1;
-          nbOctets=read(socketClients[i],buffer,2*sizeof(int));
-          if(nbOctets==sizeof(int))
+
+          bzero(&msg, sizeof(message));
+          nbOctets=read(socketClients[i],&msg,sizeof(message));
+
+          if(msg.type==UNLOG)
           {
-            memcpy(&tmp, buffer, sizeof(int));
-            if(isID(tmp))
+            memcpy(&tmp, msg.contenu, sizeof(int));
+            close(socketClients[i]);
+            for(int j=i;j<nbClients-2; j++)
             {
-              close(socketClients[i]);
-              for(int j=i;j<nbClients-2; j++)
-              {
-                socketClients[j]=socketClients[j+1];
-              }
-              removeClient(infoClients, nbClients, tmp);
-              nbClients--;
-              if(partieLancee)
-              {
-                partieLancee=0;
-                threadCree=-1;
-                system("clear");
-                printf(COLOR_RED "Partie annulée :" RESET " Joueur(s) déconnecté.\n");
-                sleep(2);
-              }
-              afficherLobby();
+              socketClients[j]=socketClients[j+1];
             }
-            else if(tmp==1)
-            {
-              partieLancee=1;
-              pthread_cancel(threadLectureAdr);
-              printf("La partie a été lancé par un autre utilisateur." COLOR_YELLOW " Veuillez patienter...\n" RESET);
-              sleep(2);
-            }
-          }
-          else if(nbOctets==2*sizeof(int))
-          {
+            removeClient(infoClients, nbClients, tmp);
+            nbClients--;
+
             if(partieLancee)
             {
-              memcpy(&hostID, buffer, sizeof(int));
-              memcpy(&scoreMax, buffer+sizeof(int), sizeof(int));
-              afficherPartie(scoreMax, scoreClients);
+              threadLectureHostCree=-1;
+              partieLancee=0;
+              system("clear");
+              printf(COLOR_RED "Partie annulée :" RESET " Joueur(s) déconnecté.\n");
+              sleep(2);
+            }
+            afficherLobby();
+          }
+          else if(msg.type==STARTGAME)
+          {
+            partieLancee=1;
+            pthread_cancel(threadLectureHostAdr);
+            printf("La partie a été lancé par un autre utilisateur." COLOR_YELLOW " Veuillez patienter...\n" RESET);
+            sleep(2);
+          }
+          else if(msg.type==CANCEL)
+          {
+            pthread_cancel(threadLectureJeuAdr);
+            printf("Un autre utilisateur a répondu avant vous." COLOR_YELLOW " Veuillez patienter...\n" RESET);
+            sleep(2);
+          }
+          else if(msg.type==INFOHOST)
+          {
+            memcpy(&hostID, msg.contenu, sizeof(int));
+            memcpy(&scoreMax, msg.contenu+sizeof(int), sizeof(int));
+            hostSocket=socketClients[i];
+            afficherPartie(scoreMax, scoreClients);
+          }
+          else if(msg.type==DES)
+          {
+            memcpy(&idJoueur, msg.contenu, sizeof(int));
+            memcpy(&ch1, msg.contenu+sizeof(int), sizeof(int));
+            memcpy(&ch2, msg.contenu+2*sizeof(int), sizeof(int));
+            memcpy(&cul, msg.contenu+3*sizeof(int), sizeof(int));
+            afficherDes(ch1, ch2, cul, infoClient.pseudo, idJoueur, id);
+            c=trouverCombinaison(ch1, ch2, cul);
+            if(id==hostID)
+            {
+              scoreDes=calculPoints(ch1, ch2, cul, c);
+            }
+            traiterCombinaison(c, &threadLectureJeuAdr, &saisieUsr, scoreDes, scoreClients, idJoueur);
+          }
+          else if (hostID==id && (saisieUsr=='0' || saisieUsr=='1' || msg.type==ANSWER))
+          {
+            if(nbOctets!=-1)
+            {
+              pthread_cancel(threadLectureJeuAdr);
+              memcpy(&tmp, msg.contenu, sizeof(int));
+              memcpy(&saisieUsr, msg.contenu+sizeof(int), sizeof(char));
+            }
+            else
+            {
+              tmp=id;
             }
 
+            if(saisieUsr=='0' && c==SUITE)
+            {
+              bzero(&msg.contenu, sizeof(int));
+              memcpy(&msg.contenu, &tmp, sizeof(int));
+              msg.type=YETANSWERED;
+              for(int j=0; j<nbClients-1; j++)
+              {
+                if(write(socketClients[j],&msg,sizeof(message))==-1)
+                {
+                  perror("writeYetAnswered");
+                }
+              }
+              if(tmp==id)
+              {
+                printf("Vous avez été le plus rapide et remportez %d points.\n\n", scoreDes);
+                for(int i=0; i<nbClients; i++)
+                {
+                  if(infoClients[i].id==id)
+                  {
+                    scoreClients[i]+=scoreDes;
+                  }
+                  memcpy(msg.contenu+i*sizeof(int), &scoreClients[i], sizeof(int));
+                }
+              }
+              else
+              {
+                printf("Le joueur %s#%d remporte %d points.\n\n", infoClients[i].pseudo, infoClients[i].id, scoreDes);
+                bzero(msg.contenu, sizeof(T_CONTENU_MESSAGE));
+                for(int i=0; i<nbClients; i++)
+                {
+                  if(infoClients[i].id==idJoueur)
+                  {
+                    scoreClients[i]+=scoreDes;
+                  }
+                  memcpy(msg.contenu+i*sizeof(int), &scoreClients[i], sizeof(int));
+                }
+              }
+
+              msg.type=SCORE;
+              for(int i=1; i<nbClients; i++)
+              {
+                if(idJoueur==infoClients[i].id)
+                {
+                  if(write(socketClients[i-1],&msg,sizeof(message) )==-1)
+                  {
+                    perror("writeScore");
+                  }
+                }
+              }
+
+            }
+            else if(saisieUsr=='1' && c==CHOUETTEVELUTE)
+            {
+              /*reponseChouetteVelute[nbRepondus-1]=id;
+              nbRepondus++;*/
+            }
+            else
+            {
+              printf(COLOR_RED "Ce n'était pas la bonne réponse...\n\n" RESET);
+            }
+            saisieUsr=0;
           }
-          else if(nbOctets!=-1)
+          else if(msg.type==YETANSWERED)
           {
-            printf("ERREUR REPONSE INATTENDUEDANSFOR\n");
-            exit(EXIT_FAILURE);
+            pthread_cancel(threadLectureJeuAdr);
+            memcpy(&tmp, msg.contenu, sizeof(int));
+            for(int j=1; j<nbClients; j++)
+            {
+              if(tmp==infoClients[j].id)
+              {
+                printf("%s#%d a répondu avant vous.", infoClients[j].pseudo, tmp);
+                break;
+              }
+            }
           }
+
         }
       }
     }
@@ -293,6 +466,43 @@ int main(int argc, char** argv)
   }
 
   return 0;
+}
+
+void traiterCombinaison(combinaison c, pthread_t* threadAdr, char* saisieUsr, int scoreDes, int* scoreClients, int idJoueur)
+{
+  message msg;
+
+  if(c==SUITE || c==CHOUETTEVELUTE)
+  {
+    afficherReponses();
+    if(pthread_create(threadAdr, NULL, (void*)threadLectureJeu, (void*)saisieUsr)==-1)
+    {
+      perror("errorHostJeu");
+    }
+  }
+  else
+  {
+    bzero(msg.contenu, sizeof(T_CONTENU_MESSAGE));
+    for(int i=0; i<nbClients; i++)
+    {
+      if(infoClients[i].id==idJoueur)
+      {
+        scoreClients[i]+=scoreDes;
+      }
+      memcpy(msg.contenu+i*sizeof(int), &scoreClients[i], sizeof(int));
+    }
+    msg.type=SCORE;
+    for(int i=1; i<nbClients; i++)
+    {
+      if(idJoueur==id)
+      {
+        if(write(socketClients[i-1],&msg,sizeof(message) )==-1)
+        {
+          perror("writeScore");
+        }
+      }
+    }
+  }
 }
 
 void afficherPartie(int scoreMax, int scoreClients[])
@@ -357,45 +567,40 @@ void determinerOrdre(int ordreSocket[])
   //Tri bulle croissant du premier tableau et rangement du second dans le même ordre
   for (int i=0; i<nbClients-1; i++)
   {
-     for(int j=i; j<nbClients-1; j++)
-     {
-       if(idRandomized[j]>idRandomized[i])
-       {
-         tmp=idRandomized[i];
-         idRandomized[i] = idRandomized[j];
-         idRandomized[j] = tmp;
-
-         tmp=ordreSocket[i];
-         ordreSocket[i] = ordreSocket[j];
-         ordreSocket[j] = tmp;
-       }
-     }
-   }
-
-   for (int i=0; i<nbClients-1; i++)
-   {
-     printf("%d ", ordreSocket[i]);
-   }
-}
-
-int isID(int id)
-{
-  for(int i=0; i<nbClients; i++)
-  {
-    if(infoClients[i].id==id)
+    for(int j=i; j<nbClients-1; j++)
     {
-      return 1;
+      if(idRandomized[j]<idRandomized[i])
+      {
+        tmp=idRandomized[i];
+        idRandomized[i] = idRandomized[j];
+        idRandomized[j] = tmp;
+
+        tmp=ordreSocket[i];
+        ordreSocket[i] = ordreSocket[j];
+        ordreSocket[j] = tmp;
+      }
     }
   }
-  return 0;
 }
 
-void* threadLecture(void* arg)
+void* threadLectureJeu(void* arg)
+{
+  char saisie;
+
+  do
+  {
+    saisie=getchar();
+  } while(saisie != '0' && saisie!='1');
+
+  memcpy(arg, &saisie, sizeof(char));
+
+  pthread_exit(NULL);
+}
+
+void* threadLectureHost(void* arg)
 {
   while(getchar()!=0x0A);
-
   memcpy(arg, &(char){'y'}, sizeof(char));
-
   pthread_exit(NULL);
 }
 
@@ -410,12 +615,16 @@ void decoServeur()
 
 void gestionArret()
 {
+  message msg;
+
   printf(COLOR_RED "Arrêt du jeu...\n" RESET);
   decoServeur();
 
+  bzero(&msg, sizeof(message));
+  msg.type=UNLOG;
   for(int i=0; i<nbClients-1; i++)
   {
-    if(write(socketClients[i],&id,sizeof(int))==-1)
+    if(write(socketClients[i],&msg,sizeof(message))==-1)
     {
       perror("writeClientQuitNotif");
     }
